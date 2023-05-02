@@ -35,7 +35,7 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
         public IParseResult<Arguments> Parse(CommandArguments arguments)
         {
             var inputFile = arguments.GetArgument(InputFileLabel).ExpectedAsSinglePathToExistingFile();
-            var outputFolder = arguments.GetArgument(OutputFolderLabel).ExpectedAsSinglePathToExistingDirectory();
+            var outputFolder = arguments.GetArgument(OutputFolderLabel).ExpectedAsSingleValue();
 
             var result = new Arguments(
                 inputFile,
