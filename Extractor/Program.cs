@@ -1,21 +1,40 @@
-﻿using Extractor;
+﻿using Extractor.Commands;
+using FFMediaToolkit;
 using TreeBasedCli;
+namespace Extractor;
 
-var settings = new ArgumentHandlerSettings
-(
-    name: "IRSS Video Tools",
-    version: "0.0.1",
-    commandTree: new CommandTree(
-        root: CreateCommandTreeRoot())
-);
-
-
-var argumentHandler = new ArgumentHandler(settings);
-await argumentHandler.HandleAsync(args);
-
-
-Command CreateCommandTreeRoot()
+public static class Program
 {
-    Command extractCommand = new ExtractCommand();
-    return extractCommand;
+    private static async Task Main(string[] args)
+    {
+        FFmpegLoader.FFmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FFmpeg");
+
+
+        var settings = new ArgumentHandlerSettings
+        (
+            "IRSS Video Tools",
+            "0.0.1",
+            new CommandTree(
+                CreateCommandTreeRoot(),
+                DependencyInjectionService.Instance)
+        );
+
+        var argumentHandler = new ArgumentHandler(settings);
+        await argumentHandler.HandleAsync(args);
+    }
+
+    private static Command CreateCommandTreeRoot()
+    {
+        Command extractCommand = new ExtractAllCommand();
+
+        var branchCommand = new BranchCommandBuilder("").WithDesription(new[]
+            {
+                "All video extraction commands"
+            })
+            .WithChildCommand(extractCommand)
+            .Build();
+
+
+        return branchCommand;
+    }
 }
