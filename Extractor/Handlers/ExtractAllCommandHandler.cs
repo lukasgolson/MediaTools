@@ -50,7 +50,11 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
             var remainingFrames = frameCount - x;
             var timeRemaining = remainingFrames * avgTime * 0.001;
 
-            Console.WriteLine($"Frame {i + 1} of {frameCount}. {elapsed * 0.001:0.00} of {timeRemaining:0} seconds");
+
+            var message = $"Frame {i + 1} of {frameCount}. {elapsed * 0.001:0.00} of {timeRemaining:0} seconds";
+
+            Console.Write("\r{0}", message);
+
 
 
 
