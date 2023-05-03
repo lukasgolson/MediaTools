@@ -6,6 +6,7 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
 {
     private const string InputFileLabel = "--input";
     private const string OutputFolderLabel = "--output";
+    private const string OutputImageFormat = "--format";
 
 
     public ExtractAllCommand() : base(
@@ -23,12 +24,16 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
             new CommandOption(OutputFolderLabel, new[]
             {
                 "Required. The output video file."
+            }),
+            new CommandOption(OutputImageFormat, new[]
+            {
+                "Required. The output image file format (e.g., .png or .jpg)."
             })
         })
     {
     }
 
-    public record Arguments(string InputFile, string OutputFolder) : IParsedCommandArguments;
+    public record Arguments(string InputFile, string OutputFolder, string outputFormat) : IParsedCommandArguments;
 
     public class Parser : ICommandArgumentParser<Arguments>
     {
@@ -36,10 +41,12 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
         {
             var inputFile = arguments.GetArgument(InputFileLabel).ExpectedAsSinglePathToExistingFile();
             var outputFolder = arguments.GetArgument(OutputFolderLabel).ExpectedAsSingleValue();
+            var outputFormat = arguments.GetArgument(OutputImageFormat).ExpectedAsSingleValue();
 
             var result = new Arguments(
                 inputFile,
-                outputFolder
+                outputFolder,
+                outputFormat
             );
 
             return new SuccessfulParseResult<Arguments>(result);

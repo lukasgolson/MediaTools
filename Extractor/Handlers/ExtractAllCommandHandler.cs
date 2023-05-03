@@ -10,17 +10,18 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
     {
         if (!Path.Exists(arguments.InputFile))
         {
-            Console.WriteLine("File does not exist...");
+            Console.WriteLine(Resources.Resources.File_Does_Not_Exist);
             return Task.CompletedTask;
         }
 
         Directory.CreateDirectory(arguments.OutputFolder);
 
+        var format = arguments.outputFormat;
+        if (string.IsNullOrEmpty(format))
+            format = ".jpg";
 
+        var fileName = Path.GetFileNameWithoutExtension(arguments.InputFile);
 
-
-
-        var i = 0;
         var file = MediaFile.Open(arguments.InputFile);
 
         var frameCount = file.Video.Info.NumberOfFrames.GetValueOrDefault(0);
@@ -31,19 +32,16 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         var stopWatch = new Stopwatch();
         stopWatch.Start();
 
+
+        var frameIndex = 0;
         while (file.Video.TryGetNextFrame(out var imageData))
         {
-
-
-            var imageName = $"{i}.png";
+            var imageName = $"{fileName}_{frameIndex}{format}";
             var output = Path.Join(arguments.OutputFolder, imageName);
 
             imageData.ToBitmap().Save(output);
 
-
-            var x = i;
-            if (x == 0)
-                x = 1;
+            var x = frameIndex != 0 ? frameIndex : 1;
 
             var elapsed = stopWatch.ElapsedMilliseconds;
             var avgTime = elapsed / x;
@@ -51,14 +49,11 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
             var timeRemaining = remainingFrames * avgTime * 0.001;
 
 
-            var message = $"Frame {i + 1} of {frameCount}. {elapsed * 0.001:0.00} of {timeRemaining:0} seconds";
+            var statusMessage = $"Frame {frameIndex + 1} of {frameCount}. {elapsed * 0.001:0.00} of {timeRemaining:0} seconds";
 
-            Console.Write("\r{0}", message);
+            Console.Write("\r{0}", statusMessage);
 
-
-
-
-            i++;
+            frameIndex++;
         }
 
 
