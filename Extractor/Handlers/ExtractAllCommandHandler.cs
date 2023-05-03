@@ -27,7 +27,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         var frameCount = file.Video.Info.NumberOfFrames.GetValueOrDefault(0);
 
 
-        Console.WriteLine($"Starting extraction. File has {frameCount} frames.");
+        Console.WriteLine(Resources.Resources.Begin_Extraction, frameCount);
 
         var stopWatch = new Stopwatch();
         stopWatch.Start();
