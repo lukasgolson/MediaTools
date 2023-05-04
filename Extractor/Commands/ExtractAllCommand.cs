@@ -7,6 +7,7 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
     private const string InputFileLabel = "--input";
     private const string OutputFolderLabel = "--output";
     private const string OutputImageFormat = "--format";
+    private const string OutputFrameSkipCount = "--skip";
 
 
     public ExtractAllCommand() : base(
@@ -27,13 +28,17 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
             }),
             new CommandOption(OutputImageFormat, new[]
             {
-                "Required. The output image file format (e.g., .png or .jpg)."
+                "The output image file format (e.g., .png or .jpg). Default: .jpg"
+            }),
+            new CommandOption(OutputFrameSkipCount, new[]
+            {
+                "The number of frames to skip for each output frame. (e.g., 0, 1, 2). Default: No skip"
             })
         })
     {
     }
 
-    public record Arguments(string InputFile, string OutputFolder, string outputFormat) : IParsedCommandArguments;
+    public record Arguments(string InputFile, string OutputFolder, string OutputFormat, int SkipCount) : IParsedCommandArguments;
 
     public class Parser : ICommandArgumentParser<Arguments>
     {
@@ -41,12 +46,17 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
         {
             var inputFile = arguments.GetArgument(InputFileLabel).ExpectedAsSinglePathToExistingFile();
             var outputFolder = arguments.GetArgument(OutputFolderLabel).ExpectedAsSingleValue();
-            var outputFormat = arguments.GetArgument(OutputImageFormat).ExpectedAsSingleValue();
+            var outputFormat = arguments.GetArgumentOrNull(OutputImageFormat)?.ExpectedAsSingleValue() ?? ".jpg";
+
+
+            var skipCount = arguments.GetArgumentOrNull(OutputFrameSkipCount)?.ExpectedAsSingleInteger() ?? 1;
+
 
             var result = new Arguments(
                 inputFile,
                 outputFolder,
-                outputFormat
+                outputFormat,
+                skipCount
             );
 
             return new SuccessfulParseResult<Arguments>(result);

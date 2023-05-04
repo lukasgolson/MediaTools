@@ -16,15 +16,9 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
         Directory.CreateDirectory(arguments.OutputFolder);
 
-        var format = arguments.outputFormat;
-        if (string.IsNullOrEmpty(format))
-            format = ".jpg";
-
-        var fileName = Path.GetFileNameWithoutExtension(arguments.InputFile);
-
         var file = MediaFile.Open(arguments.InputFile);
-
         var frameCount = file.Video.Info.NumberOfFrames.GetValueOrDefault(0);
+
 
 
         Console.WriteLine(Resources.Resources.Begin_Extraction, frameCount);
@@ -32,28 +26,33 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         var stopWatch = new Stopwatch();
         stopWatch.Start();
 
-
         var frameIndex = 0;
+        var skipCounter = 0;
         while (file.Video.TryGetNextFrame(out var imageData))
         {
-            var imageName = $"{fileName}_{frameIndex}{format}";
+            skipCounter++;
+
+            if (skipCounter <= arguments.SkipCount)
+                continue;
+
+            var imageName = $"{Path.GetFileNameWithoutExtension(arguments.InputFile)}_{frameIndex}{arguments.OutputFormat}";
             var output = Path.Join(arguments.OutputFolder, imageName);
 
             imageData.ToBitmap().Save(output);
 
-            var x = frameIndex != 0 ? frameIndex : 1;
-
+            var adjustedFrameIndex = frameIndex != 0 ? frameIndex : 1;
             var elapsed = stopWatch.ElapsedMilliseconds;
-            var avgTime = elapsed / x;
-            var remainingFrames = frameCount - x;
-            var timeRemaining = remainingFrames * avgTime * 0.001;
+            var avgTime = elapsed / adjustedFrameIndex;
+            var remainingFrames = frameCount - adjustedFrameIndex;
+            var timeRemaining = remainingFrames * avgTime;
 
 
-            var statusMessage = $"Frame {frameIndex + 1} of {frameCount}. {elapsed * 0.001:0.00} of {timeRemaining:0} seconds";
+            var statusMessage = $"Frame {frameIndex + 1} of {frameCount}. {elapsed * 0.001:0.00} of {timeRemaining * 0.001:0} seconds";
 
             Console.Write("\r{0}", statusMessage);
 
             frameIndex++;
+            skipCounter = 0;
         }
 
 
