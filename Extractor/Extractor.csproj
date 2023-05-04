@@ -6,12 +6,15 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <AssemblyName>IRSS Media Tools</AssemblyName>
+        <AssemblyName>IRSSMediaTools</AssemblyName>
         <Title>IRSS Media Tools</Title>
         <Authors>Lukas Olson</Authors>
         <SignAssembly>true</SignAssembly>
         <AssemblyOriginatorKeyFile>Resources\OlsonKey.snk</AssemblyOriginatorKeyFile>
         <ApplicationIcon>Resources\logo.ico</ApplicationIcon>
+        <Company>IRSS</Company>
+        <AssemblyVersion>0.0.1</AssemblyVersion>
+        <NeutralLanguage>en</NeutralLanguage>
     </PropertyGroup>
 
     <ItemGroup>
