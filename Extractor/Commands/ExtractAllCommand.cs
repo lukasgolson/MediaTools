@@ -11,7 +11,7 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
 
 
     public ExtractAllCommand() : base(
-        "all",
+        "extract",
         new[]
         {
             "extracts all frames from the input video file."
@@ -38,7 +38,7 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
     {
     }
 
-    public record Arguments(string InputFile, string OutputFolder, string OutputFormat, int SkipCount) : IParsedCommandArguments;
+    public record Arguments(string InputFile, string OutputFolder, string OutputFormat, int FrameSkipCount) : IParsedCommandArguments;
 
     public class Parser : ICommandArgumentParser<Arguments>
     {

@@ -17,7 +17,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         Directory.CreateDirectory(arguments.OutputFolder);
 
         var file = MediaFile.Open(arguments.InputFile);
-        var frameCount = file.Video.Info.NumberOfFrames.GetValueOrDefault(0);
+        var frameCount = file.Video.Info.NumberOfFrames.GetValueOrDefault(0) / arguments.FrameSkipCount;
 
 
 
@@ -32,7 +32,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         {
             skipCounter++;
 
-            if (skipCounter <= arguments.SkipCount)
+            if (skipCounter <= arguments.FrameSkipCount)
                 continue;
 
             var imageName = $"{Path.GetFileNameWithoutExtension(arguments.InputFile)}_{frameIndex}{arguments.OutputFormat}";
@@ -49,7 +49,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
             var statusMessage = $"Frame {frameIndex + 1} of {frameCount}. {elapsed * 0.001:0.00} of {timeRemaining * 0.001:0} seconds";
 
-            Console.Write("\r{0}", statusMessage);
+            Console.Write("\r" + statusMessage);
 
             frameIndex++;
             skipCounter = 0;

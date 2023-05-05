@@ -30,4 +30,16 @@
     <data name="File_Does_Not_Exist" xml:space="preserve">
         <value>File does not exist...</value>
     </data>
+    <data name="MetadataPair" xml:space="preserve">
+        <value>{0}: {1};</value>
+    </data>
+    <data name="MetadataHeader" xml:space="preserve">
+        <value>Metadata: </value>
+    </data>
+    <data name="InfoLine1" xml:space="preserve">
+        <value># of frames: {0}, Frame Size: {1}, is Variable FR: {2}, Avg. FR: {3}</value>
+    </data>
+    <data name="InfoLine2" xml:space="preserve">
+        <value>Rotation: {0}, is Interlaced: {1}, Pixel Format {2}, Duration: {3}, Codec: {4}</value>
+    </data>
 </root>

@@ -26,12 +26,14 @@ public static class Program
     private static Command CreateCommandTreeRoot()
     {
         Command extractCommand = new ExtractAllCommand();
+        Command infoCommand = new ListInformationCommand();
 
         var branchCommand = new BranchCommandBuilder("").WithDesription(new[]
             {
                 "All video extraction commands"
             })
             .WithChildCommand(extractCommand)
+            .WithChildCommand(infoCommand)
             .Build();
 
 

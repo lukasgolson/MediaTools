@@ -76,5 +76,41 @@ namespace Extractor.Resources {
                 return ResourceManager.GetString("File_Does_Not_Exist", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to # of frames: {0}, Frame Size: {1}, is Variable FR: {2}, Avg. FR: {3}.
+        /// </summary>
+        internal static string InfoLine1 {
+            get {
+                return ResourceManager.GetString("InfoLine1", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rotation: {0}, is Interlaced: {1}, Pixel Format {2}, Duration: {3}, Codec: {4}.
+        /// </summary>
+        internal static string InfoLine2 {
+            get {
+                return ResourceManager.GetString("InfoLine2", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Metadata: .
+        /// </summary>
+        internal static string MetadataHeader {
+            get {
+                return ResourceManager.GetString("MetadataHeader", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0}: {1};.
+        /// </summary>
+        internal static string MetadataPair {
+            get {
+                return ResourceManager.GetString("MetadataPair", resourceCulture);
+            }
+        }
     }
 }
