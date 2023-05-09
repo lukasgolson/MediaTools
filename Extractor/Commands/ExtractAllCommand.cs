@@ -24,7 +24,7 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
             }),
             new CommandOption(OutputFolderLabel, new[]
             {
-                "Required. The output video file."
+                "The output path. Default: Name of the input file without extension."
             }),
             new CommandOption(OutputImageFormat, new[]
             {
@@ -45,7 +45,7 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
         public IParseResult<Arguments> Parse(CommandArguments arguments)
         {
             var inputFile = arguments.GetArgument(InputFileLabel).ExpectedAsSinglePathToExistingFile();
-            var outputFolder = arguments.GetArgument(OutputFolderLabel).ExpectedAsSingleValue();
+            var outputFolder = arguments.GetArgumentOrNull(OutputFolderLabel)?.ExpectedAsSingleValue() ?? Path.GetFileNameWithoutExtension(inputFile);
             var outputFormat = arguments.GetArgumentOrNull(OutputImageFormat)?.ExpectedAsSingleValue() ?? ".jpg";
 
 

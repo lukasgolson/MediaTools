@@ -17,6 +17,12 @@
         <NeutralLanguage>en</NeutralLanguage>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <PublishReadyToRun>true</PublishReadyToRun>
+        <PublishTrimmed>true</PublishTrimmed>
+
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="FFMediaToolkit" Version="4.4.1"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0-preview.3.23174.8"/>
