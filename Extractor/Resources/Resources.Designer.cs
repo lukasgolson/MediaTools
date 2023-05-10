@@ -112,5 +112,32 @@ namespace Extractor.Resources {
                 return ResourceManager.GetString("MetadataPair", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Processing frame {0} of {1}. {2:0.00} elapsed of estimated {3:0} seconds. {4:0} seconds remaining..
+        /// </summary>
+        internal static string ProcessingFrame {
+            get {
+                return ResourceManager.GetString("ProcessingFrame", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Task complete in {0:0.00} seconds.
+        /// </summary>
+        internal static string TaskCompleteText {
+            get {
+                return ResourceManager.GetString("TaskCompleteText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Waiting on IO to save {0} files..
+        /// </summary>
+        internal static string WaitingIOSave {
+            get {
+                return ResourceManager.GetString("WaitingIOSave", resourceCulture);
+            }
+        }
     }
 }

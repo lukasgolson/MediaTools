@@ -42,4 +42,13 @@
     <data name="InfoLine2" xml:space="preserve">
         <value>Rotation: {0}, is Interlaced: {1}, Pixel Format {2}, Duration: {3}, Codec: {4}</value>
     </data>
+    <data name="TaskCompleteText" xml:space="preserve">
+        <value>Task complete in {0:0.00} seconds</value>
+    </data>
+    <data name="WaitingIOSave" xml:space="preserve">
+        <value>Waiting on IO to save {0} files.</value>
+    </data>
+    <data name="ProcessingFrame" xml:space="preserve">
+        <value>Processing frame {0} of {1}. {2:0.00} elapsed of estimated {3:0} seconds. {4:0} seconds remaining.</value>
+    </data>
 </root>

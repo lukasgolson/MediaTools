@@ -15,6 +15,7 @@
         <Company>IRSS</Company>
         <AssemblyVersion>0.0.1</AssemblyVersion>
         <NeutralLanguage>en</NeutralLanguage>
+        <LangVersion>preview</LangVersion>
     </PropertyGroup>
 
     <PropertyGroup>
