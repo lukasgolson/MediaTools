@@ -17,51 +17,52 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         Directory.CreateDirectory(arguments.OutputFolder);
 
         var file = MediaFile.Open(arguments.InputFile);
-        var frameCount = file.Video.Info.NumberOfFrames.GetValueOrDefault(0) / arguments.FrameSkipCount;
 
+        var frameSkipCount = (int)Math.Round(file.Video.Info.AvgFrameRate * arguments.DropRatio, 0);
 
+        if (frameSkipCount == 0)
+            frameSkipCount = 1;
+
+        var frameCount = Math.Round(file.Video.Info.AvgFrameRate * file.Video.Info.Duration.TotalSeconds / 2 / frameSkipCount, 0);
 
         Console.WriteLine(Resources.Resources.Begin_Extraction, frameCount);
 
         var stopWatch = new Stopwatch();
         stopWatch.Start();
 
-        var frameIndex = 0;
+        var frameIndex = 1;
         var skipCounter = 0;
 
-        var queued = 0;
-        var completed = 0;
+        ulong queued = 0;
+        ulong completed = 0;
 
         while (file.Video.TryGetNextFrame(out var imageData))
         {
             skipCounter++;
 
-            if (skipCounter <= arguments.FrameSkipCount)
+            if (skipCounter <= frameSkipCount)
                 continue;
 
-            var imageName = $"{Path.GetFileNameWithoutExtension(arguments.InputFile)}_{frameIndex}{arguments.OutputFormat}";
+            var imageName = $"{Path.GetFileNameWithoutExtension(arguments.InputFile)}_{frameIndex}.{arguments.OutputFormat}";
             var output = Path.Join(arguments.OutputFolder, imageName);
-
             var bitmap = imageData.ToBitmap();
 
             queued++;
-
-
-            Task.Run(() =>
+            Task.Run(async () =>
                 {
-                    bitmap.SaveAsync(output);
+                    await bitmap.SaveAsync(output);
                     completed++;
                 }
             );
 
-            var adjustedFrameIndex = frameIndex != 0 ? frameIndex : 1;
-            var elapsed = stopWatch.ElapsedMilliseconds;
-            var avgTime = elapsed / adjustedFrameIndex;
-            var remainingFrames = frameCount - adjustedFrameIndex;
-            var totalTime = remainingFrames * avgTime;
-            var timeRemaining = totalTime - elapsed;
 
-            Console.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex + 1, frameCount, elapsed * 0.001, totalTime * 0.001, Math.Max(0, timeRemaining * 0.001)));
+            var stopWatchElapsedMilliseconds = stopWatch.ElapsedMilliseconds;
+            var avgFrameProcessingTime = stopWatchElapsedMilliseconds / frameIndex;
+            var remainingFrames = frameCount - frameIndex;
+            var totalTime = remainingFrames * avgFrameProcessingTime;
+            var timeRemaining = totalTime - stopWatchElapsedMilliseconds;
+
+            Console.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, frameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, Math.Max(0, timeRemaining * 0.001)));
 
             frameIndex++;
             skipCounter = 0;

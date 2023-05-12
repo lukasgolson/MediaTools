@@ -6,8 +6,8 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
 {
     private const string InputFileLabel = "--input";
     private const string OutputFolderLabel = "--output";
-    private const string OutputImageFormat = "--format";
-    private const string OutputFrameSkipCount = "--skip";
+    private const string OutputImageFormatLabel = "--format";
+    private const string OutputFrameDropRatioLabel = "--drop";
 
 
     public ExtractAllCommand() : base(
@@ -26,19 +26,19 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
             {
                 "The output path. Default: Name of the input file without extension."
             }),
-            new CommandOption(OutputImageFormat, new[]
+            new CommandOption(OutputImageFormatLabel, new[]
             {
-                "The output image file format (e.g., .png or .jpg). Default: .jpg"
+                "The output image file format (e.g., .png or .jpg). Default: jpg"
             }),
-            new CommandOption(OutputFrameSkipCount, new[]
+            new CommandOption(OutputFrameDropRatioLabel, new[]
             {
-                "The number of frames to skip for each output frame. (e.g., 0, 1, 2). Default: No skip"
+                "The ratio of frames to drop from the output. (e.g., 0 = no drop, 0.5 = half, 1 = all). Default: 0"
             })
         })
     {
     }
 
-    public record Arguments(string InputFile, string OutputFolder, string OutputFormat, int FrameSkipCount) : IParsedCommandArguments;
+    public record Arguments(string InputFile, string OutputFolder, string OutputFormat, float DropRatio) : IParsedCommandArguments;
 
     public class Parser : ICommandArgumentParser<Arguments>
     {
@@ -46,17 +46,21 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
         {
             var inputFile = arguments.GetArgument(InputFileLabel).ExpectedAsSinglePathToExistingFile();
             var outputFolder = arguments.GetArgumentOrNull(OutputFolderLabel)?.ExpectedAsSingleValue() ?? Path.GetFileNameWithoutExtension(inputFile);
-            var outputFormat = arguments.GetArgumentOrNull(OutputImageFormat)?.ExpectedAsSingleValue() ?? ".jpg";
+            var outputFormat = (arguments.GetArgumentOrNull(OutputImageFormatLabel)?.ExpectedAsSingleValue() ?? "jpg").Replace(".", "", StringComparison.InvariantCultureIgnoreCase);
+            var dropRatioString = arguments.GetArgumentOrNull(OutputFrameDropRatioLabel)?.ExpectedAsSingleValue();
 
+            float dropRatio;
 
-            var skipCount = arguments.GetArgumentOrNull(OutputFrameSkipCount)?.ExpectedAsSingleInteger() ?? 1;
-
+            if (float.TryParse(dropRatioString, out var parseResult))
+                dropRatio = parseResult;
+            else
+                dropRatio = 0;
 
             var result = new Arguments(
                 inputFile,
                 outputFolder,
                 outputFormat,
-                skipCount
+                dropRatio
             );
 
             return new SuccessfulParseResult<Arguments>(result);

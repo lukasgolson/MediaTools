@@ -60,7 +60,7 @@ namespace Extractor.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Starting extraction. File has {0} frames..
+        ///   Looks up a localized string similar to Starting extraction. File has estimated {0} frames..
         /// </summary>
         internal static string Begin_Extraction {
             get {
