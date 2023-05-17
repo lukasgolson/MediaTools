@@ -1,6 +1,7 @@
 ﻿using Extractor.Commands;
 using FFMediaToolkit;
 using TreeBasedCli;
+using TreeBasedCli.Exceptions;
 namespace Extractor;
 
 public static class Program
@@ -19,8 +20,20 @@ public static class Program
                 DependencyInjectionService.Instance)
         );
 
-        var argumentHandler = new ArgumentHandler(settings);
-        await argumentHandler.HandleAsync(args);
+        try
+        {
+            var argumentHandler = new ArgumentHandler(settings);
+            await argumentHandler.HandleAsync(args);
+        }
+        catch (MessageOnlyException e)
+        {
+            Console.WriteLine(e.Message);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
     }
 
     private static Command CreateCommandTreeRoot()

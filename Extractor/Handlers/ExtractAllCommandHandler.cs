@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Extractor.Commands;
+using Extractor.Extensions;
 using FFMediaToolkit.Decoding;
 using TreeBasedCli;
 namespace Extractor.Handlers;
@@ -36,12 +37,22 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         ulong queued = 0;
         ulong completed = 0;
 
+        var previousFrame = file.Video.GetFrame(new TimeSpan(0));
+
         while (file.Video.TryGetNextFrame(out var imageData))
         {
+
             skipCounter++;
 
             if (skipCounter <= frameSkipCount)
                 continue;
+
+
+            var frameSharpness = MotionBasedFrameExtraction.CalculateImageSharpness(imageData);
+
+
+
+            var overlap = MotionBasedFrameExtraction.CalculateFrameMovement(previousFrame, imageData);
 
             var imageName = $"{Path.GetFileNameWithoutExtension(arguments.InputFile)}_{frameIndex}.{arguments.OutputFormat}";
             var output = Path.Join(arguments.OutputFolder, imageName);
@@ -58,14 +69,20 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
             var stopWatchElapsedMilliseconds = stopWatch.ElapsedMilliseconds;
             var avgFrameProcessingTime = stopWatchElapsedMilliseconds / frameIndex;
-            var remainingFrames = frameCount - frameIndex;
-            var totalTime = remainingFrames * avgFrameProcessingTime;
+            var totalTime = frameCount * avgFrameProcessingTime;
             var timeRemaining = totalTime - stopWatchElapsedMilliseconds;
 
-            Console.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, frameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, Math.Max(0, timeRemaining * 0.001)));
+
+
+
+
+            Console.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, frameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, Math.Max(0, timeRemaining * 0.001), frameSharpness));
+            Console.Write($" Overlap {overlap}%");
 
             frameIndex++;
             skipCounter = 0;
+
+            previousFrame = imageData;
         }
 
 

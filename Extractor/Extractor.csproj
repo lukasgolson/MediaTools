@@ -25,6 +25,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Emgu.CV" Version="4.7.0.5276"/>
+        <PackageReference Include="Emgu.CV.runtime.windows" Version="4.7.0.5276"/>
         <PackageReference Include="FFMediaToolkit" Version="4.4.1"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0-preview.3.23174.8"/>
         <PackageReference Include="SixLabors.ImageSharp" Version="3.0.1"/>

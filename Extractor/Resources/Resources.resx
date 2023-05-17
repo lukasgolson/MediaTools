@@ -49,6 +49,6 @@
         <value>Waiting on IO to save {0} files.</value>
     </data>
     <data name="ProcessingFrame" xml:space="preserve">
-        <value>Processing frame {0} of {1}. {2:0.00} elapsed of estimated {3:0} seconds. {4:0} seconds remaining.</value>
+        <value>Processing frame {0} of {1}. {2:0.00} seconds elapsed of estimated {3:0} seconds. {4:0} seconds remaining. Sharpness score: {5:0}</value>
     </data>
 </root>
