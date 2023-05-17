@@ -47,13 +47,6 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
             if (skipCounter <= frameSkipCount)
                 continue;
 
-
-            var frameSharpness = MotionBasedFrameExtraction.CalculateImageSharpness(imageData);
-
-
-
-            var overlap = MotionBasedFrameExtraction.CalculateFrameMovement(previousFrame, imageData);
-
             var imageName = $"{Path.GetFileNameWithoutExtension(arguments.InputFile)}_{frameIndex}.{arguments.OutputFormat}";
             var output = Path.Join(arguments.OutputFolder, imageName);
             var bitmap = imageData.ToBitmap();
@@ -76,13 +69,11 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
 
 
-            Console.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, frameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, Math.Max(0, timeRemaining * 0.001), frameSharpness));
-            Console.Write($" Overlap {overlap}%");
+            Console.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, frameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, Math.Max(0, timeRemaining * 0.001)));
+
 
             frameIndex++;
             skipCounter = 0;
-
-            previousFrame = imageData;
         }
 
 

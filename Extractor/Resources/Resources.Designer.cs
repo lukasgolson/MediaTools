@@ -114,7 +114,7 @@ namespace Extractor.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Processing frame {0} of {1}. {2:0.00} seconds elapsed of estimated {3:0} seconds. {4:0} seconds remaining. Sharpness score: {5:0}.
+        ///   Looks up a localized string similar to Processing frame {0} of {1}. {2:0.00} seconds elapsed of estimated {3:0} seconds. {4:0} seconds remaining..
         /// </summary>
         internal static string ProcessingFrame {
             get {
