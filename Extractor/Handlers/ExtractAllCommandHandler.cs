@@ -23,7 +23,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         if (frameSkipCount == 0)
             frameSkipCount = 1;
 
-        var frameCount = Math.Round(file.Video.Info.AvgFrameRate * file.Video.Info.Duration.TotalSeconds / 2 / frameSkipCount, 0);
+        var frameCount = Math.Round(file.Video.Info.AvgFrameRate * file.Video.Info.Duration.TotalSeconds / frameSkipCount, 0);
 
         Console.WriteLine(Resources.Resources.Begin_Extraction, frameCount);
 
