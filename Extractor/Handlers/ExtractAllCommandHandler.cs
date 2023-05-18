@@ -19,46 +19,28 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
         var file = MediaFile.Open(arguments.InputFile);
 
-        var frameSkipCount = (int)Math.Round(file.Video.Info.AvgFrameRate * arguments.DropRatio, 0);
-
-        if (frameSkipCount == 0)
-            frameSkipCount = 1;
-
-        var frameCount = Math.Round(file.Video.Info.AvgFrameRate * file.Video.Info.Duration.TotalSeconds / frameSkipCount, 0);
-
+        var frameCount = file.Video.Info.NumberOfFrames;
         Console.WriteLine(Resources.Resources.Begin_Extraction, frameCount);
 
         var stopWatch = new Stopwatch();
         stopWatch.Start();
 
         var frameIndex = 1;
-        var skipCounter = 0;
-
         ulong queued = 0;
         ulong completed = 0;
 
-        var previousFrame = file.Video.GetFrame(new TimeSpan(0));
-
-        while (file.Video.TryGetNextFrame(out var imageData))
+        foreach (var frame in GetFrames(file, arguments.DropRatio))
         {
-
-            skipCounter++;
-
-            if (skipCounter <= frameSkipCount)
-                continue;
-
             var imageName = $"{Path.GetFileNameWithoutExtension(arguments.InputFile)}_{frameIndex}.{arguments.OutputFormat}";
             var output = Path.Join(arguments.OutputFolder, imageName);
-            var bitmap = imageData.ToBitmap();
 
             queued++;
             Task.Run(async () =>
                 {
-                    await bitmap.SaveAsync(output);
+                    await frame.SaveAsync(output);
                     completed++;
                 }
             );
-
 
             var stopWatchElapsedMilliseconds = stopWatch.ElapsedMilliseconds;
             var avgFrameProcessingTime = stopWatchElapsedMilliseconds / frameIndex;
@@ -66,14 +48,10 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
             var timeRemaining = totalTime - stopWatchElapsedMilliseconds;
 
 
-
-
-
-            Console.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, frameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, Math.Max(0, timeRemaining * 0.001)));
+            Console.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, frameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, timeRemaining * 0.001));
 
 
             frameIndex++;
-            skipCounter = 0;
         }
 
 
@@ -90,5 +68,28 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
 
         return Task.CompletedTask;
+    }
+    private IEnumerable<Image<Bgr24>> GetFrames(MediaFile mediaFile, float dropRatio)
+    {
+        var frameSkipCount = (int)Math.Round(mediaFile.Video.Info.AvgFrameRate * dropRatio, 0);
+
+        if (frameSkipCount == 0)
+            frameSkipCount = 1;
+
+        var skipCounter = 0;
+
+        while (mediaFile.Video.TryGetNextFrame(out var imageData))
+        {
+
+            skipCounter++;
+
+            if (skipCounter <= frameSkipCount)
+                continue;
+
+
+            yield return imageData.ToBitmap();
+
+            skipCounter = 0;
+        }
     }
 }
