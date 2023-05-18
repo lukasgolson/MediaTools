@@ -1,12 +1,13 @@
 ﻿using Extractor.Commands;
 using FFMediaToolkit;
+using Spectre.Console;
 using TreeBasedCli;
 using TreeBasedCli.Exceptions;
 namespace Extractor;
 
 public static class Program
 {
-    private static async Task Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         FFmpegLoader.FFmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FFmpeg");
 
@@ -27,13 +28,17 @@ public static class Program
         }
         catch (MessageOnlyException e)
         {
-            Console.WriteLine(e.Message);
+            AnsiConsole.WriteLine(e.Message);
+            return -1;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            AnsiConsole.Status();
+            AnsiConsole.WriteException(e);
             throw;
         }
+
+        return 0;
     }
 
     private static Command CreateCommandTreeRoot()

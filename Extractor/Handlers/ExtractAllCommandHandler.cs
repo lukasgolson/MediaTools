@@ -2,25 +2,33 @@
 using Extractor.Commands;
 using Extractor.Extensions;
 using FFMediaToolkit.Decoding;
+using Spectre.Console;
 using TreeBasedCli;
 namespace Extractor.Handlers;
 
 public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Arguments>
 {
-    public Task HandleAsync(ExtractAllCommand.Arguments arguments, LeafCommand executedCommand)
+    public async Task HandleAsync(ExtractAllCommand.Arguments arguments, LeafCommand executedCommand)
     {
         if (!Path.Exists(arguments.InputFile))
         {
-            Console.WriteLine(Resources.Resources.File_Does_Not_Exist);
-            return Task.CompletedTask;
+            AnsiConsole.WriteLine(Resources.Resources.File_Does_Not_Exist);
+            return;
         }
 
         Directory.CreateDirectory(arguments.OutputFolder);
 
         var file = MediaFile.Open(arguments.InputFile);
 
-        var frameCount = file.Video.Info.NumberOfFrames;
-        Console.WriteLine(Resources.Resources.Begin_Extraction, frameCount);
+
+        var frameCount = file.Video.Info.NumberOfFrames ?? 0;
+        AnsiConsole.WriteLine(Resources.Resources.Begin_Extraction, frameCount);
+
+        var path = new TextPath(Path.GetFullPath(arguments.OutputFolder));
+
+
+        AnsiConsole.Write(path);
+
 
         var stopWatch = new Stopwatch();
         stopWatch.Start();
@@ -35,12 +43,16 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
             var output = Path.Join(arguments.OutputFolder, imageName);
 
             queued++;
-            Task.Run(async () =>
-                {
-                    await frame.SaveAsync(output);
-                    completed++;
-                }
-            );
+
+            async void SaveFrame()
+            {
+                await frame.SaveAsync(output);
+            }
+
+            _ = Task.Run(SaveFrame).ContinueWith(delegate
+            {
+                completed++;
+            });
 
             var stopWatchElapsedMilliseconds = stopWatch.ElapsedMilliseconds;
             var avgFrameProcessingTime = stopWatchElapsedMilliseconds / frameIndex;
@@ -48,26 +60,25 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
             var timeRemaining = totalTime - stopWatchElapsedMilliseconds;
 
 
-            Console.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, frameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, timeRemaining * 0.001));
+            AnsiConsole.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, frameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, timeRemaining * 0.001));
 
 
             frameIndex++;
         }
 
 
-        Console.Write(Environment.NewLine);
+        AnsiConsole.Write(Environment.NewLine);
 
 
         while (queued > completed)
-            Console.Write("\r" + string.Format(Resources.Resources.WaitingIOSave, queued - completed));
+            AnsiConsole.Write("\r" + string.Format(Resources.Resources.WaitingIOSave, queued - completed));
 
         stopWatch.Stop();
 
-        Console.Write(Environment.NewLine);
-        Console.WriteLine(Resources.Resources.TaskCompleteText, stopWatch.ElapsedMilliseconds * 0.001);
+        AnsiConsole.Write(Environment.NewLine);
+        AnsiConsole.WriteLine(Resources.Resources.TaskCompleteText, stopWatch.ElapsedMilliseconds * 0.001);
 
 
-        return Task.CompletedTask;
     }
     private IEnumerable<Image<Bgr24>> GetFrames(MediaFile mediaFile, float dropRatio)
     {

@@ -1,5 +1,6 @@
 ﻿using Extractor.Commands;
 using FFMediaToolkit.Decoding;
+using Spectre.Console;
 using TreeBasedCli;
 namespace Extractor.Handlers;
 
@@ -10,18 +11,17 @@ public class ListInfoCommandHandler : ILeafCommandHandler<ListInformationCommand
         var file = MediaFile.Open(arguments.InputFile);
         var info = file.Video.Info;
 
+        AnsiConsole.WriteLine(arguments.InputFile);
 
-        Console.WriteLine(arguments.InputFile);
-
-        Console.WriteLine(Resources.Resources.InfoLine1, info.NumberOfFrames, info.FrameSize, info.IsVariableFrameRate, info.AvgFrameRate);
-        Console.WriteLine(Resources.Resources.InfoLine2, info.Rotation, info.IsInterlaced, info.PixelFormat, info.Duration, info.CodecName);
+        AnsiConsole.WriteLine(Resources.Resources.InfoLine1, info.NumberOfFrames, info.FrameSize, info.IsVariableFrameRate, info.AvgFrameRate);
+        AnsiConsole.WriteLine(Resources.Resources.InfoLine2, info.Rotation, info.IsInterlaced, info.PixelFormat, info.Duration, info.CodecName);
 
 
-        Console.Write(Resources.Resources.MetadataHeader);
+        AnsiConsole.Write(Resources.Resources.MetadataHeader);
         foreach (var pair in info.Metadata)
         {
-            Console.Write(Resources.Resources.MetadataPair, pair.Key, pair.Value);
-            Console.Write(@" ");
+            AnsiConsole.Write(Resources.Resources.MetadataPair, pair.Key, pair.Value);
+            AnsiConsole.Write(@" ");
         }
 
 
