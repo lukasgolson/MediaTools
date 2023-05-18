@@ -21,14 +21,11 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         var file = MediaFile.Open(arguments.InputFile);
 
 
-        var frameCount = file.Video.Info.NumberOfFrames ?? 0;
-        AnsiConsole.WriteLine(Resources.Resources.Begin_Extraction, frameCount);
+        var actualFrameCount = file.Video.Info.NumberOfFrames;
+        var finalFrameCount = actualFrameCount * (1 - arguments.DropRatio);
+        AnsiConsole.WriteLine(Resources.Resources.Begin_Extraction, actualFrameCount ?? 0, arguments.DropRatio, finalFrameCount ?? 0);
 
-        var path = new TextPath(Path.GetFullPath(arguments.OutputFolder));
-
-
-        AnsiConsole.Write(path);
-
+        AnsiConsole.Write(new TextPath(Path.GetFullPath(arguments.OutputFolder)));
 
         var stopWatch = new Stopwatch();
         stopWatch.Start();
@@ -47,20 +44,21 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
             async void SaveFrame()
             {
                 await frame.SaveAsync(output);
+                completed++;
             }
 
-            _ = Task.Run(SaveFrame).ContinueWith(delegate
-            {
-                completed++;
-            });
+
+
+
+            _ = Task.Run(SaveFrame);
 
             var stopWatchElapsedMilliseconds = stopWatch.ElapsedMilliseconds;
             var avgFrameProcessingTime = stopWatchElapsedMilliseconds / frameIndex;
-            var totalTime = frameCount * avgFrameProcessingTime;
-            var timeRemaining = totalTime - stopWatchElapsedMilliseconds;
+            var totalTime = finalFrameCount * avgFrameProcessingTime;
+            double timeRemaining = totalTime ?? float.PositiveInfinity - stopWatchElapsedMilliseconds;
 
 
-            AnsiConsole.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, frameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, timeRemaining * 0.001));
+            AnsiConsole.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, finalFrameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, Math.Max(timeRemaining * 0.001, 0d)));
 
 
             frameIndex++;
@@ -70,8 +68,12 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         AnsiConsole.Write(Environment.NewLine);
 
 
+
+
         while (queued > completed)
             AnsiConsole.Write("\r" + string.Format(Resources.Resources.WaitingIOSave, queued - completed));
+
+
 
         stopWatch.Stop();
 
@@ -82,25 +84,21 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
     }
     private IEnumerable<Image<Bgr24>> GetFrames(MediaFile mediaFile, float dropRatio)
     {
-        var frameSkipCount = (int)Math.Round(mediaFile.Video.Info.AvgFrameRate * dropRatio, 0);
+        dropRatio = Math.Abs(dropRatio);
 
-        if (frameSkipCount == 0)
-            frameSkipCount = 1;
+        float dropFrameNumber = 0;
+        if (dropRatio != 0)
+            dropFrameNumber = 1 / dropRatio;
 
-        var skipCounter = 0;
 
+        uint frameCounter = 0;
         while (mediaFile.Video.TryGetNextFrame(out var imageData))
         {
 
-            skipCounter++;
+            if (dropRatio <= 0 || frameCounter % dropFrameNumber != 0)
+                yield return imageData.ToBitmap();
 
-            if (skipCounter <= frameSkipCount)
-                continue;
-
-
-            yield return imageData.ToBitmap();
-
-            skipCounter = 0;
+            frameCounter++;
         }
     }
 }

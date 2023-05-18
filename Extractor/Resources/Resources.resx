@@ -25,7 +25,7 @@
         </value>
     </resheader>
     <data name="Begin_Extraction" xml:space="preserve">
-        <value>Starting extraction. File has estimated {0} frames.</value>
+        <value>Starting extraction. File has estimated {0} frames. Applying drop ratio of {1}. Final frame count: {2}.</value>
     </data>
     <data name="File_Does_Not_Exist" xml:space="preserve">
         <value>File does not exist...</value>
