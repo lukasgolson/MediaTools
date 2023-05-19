@@ -21,9 +21,9 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         var file = MediaFile.Open(arguments.InputFile);
 
 
-        var actualFrameCount = file.Video.Info.NumberOfFrames;
-        var finalFrameCount = actualFrameCount * (1 - arguments.DropRatio);
-        AnsiConsole.WriteLine(Resources.Resources.Begin_Extraction, actualFrameCount ?? 0, arguments.DropRatio, finalFrameCount ?? 0);
+        var actualFrameCount = file.Video.Info.NumberOfFrames ?? 0;
+        var finalFrameCount = MathF.Round(actualFrameCount * (1 - arguments.DropRatio));
+        AnsiConsole.WriteLine(Resources.Resources.Begin_Extraction, actualFrameCount, arguments.DropRatio, finalFrameCount);
 
         AnsiConsole.Write(new TextPath(Path.GetFullPath(arguments.OutputFolder)));
 
@@ -55,7 +55,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
             var stopWatchElapsedMilliseconds = stopWatch.ElapsedMilliseconds;
             var avgFrameProcessingTime = stopWatchElapsedMilliseconds / frameIndex;
             var totalTime = finalFrameCount * avgFrameProcessingTime;
-            double timeRemaining = (totalTime ?? 0) - stopWatchElapsedMilliseconds;
+            double timeRemaining = totalTime - stopWatchElapsedMilliseconds;
 
 
             AnsiConsole.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, finalFrameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, Math.Max(timeRemaining * 0.001, 0d)));
@@ -71,7 +71,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
 
         while (queued > completed)
-            AnsiConsole.Write("\r" + string.Format(Resources.Resources.WaitingIOSave, queued - completed));
+            AnsiConsole.Write("\r" + string.Format(Resources.Resources.WaitingIOSave, queued - completed, stopWatch.ElapsedMilliseconds * 0.001));
 
 
 

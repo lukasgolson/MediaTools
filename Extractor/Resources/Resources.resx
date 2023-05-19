@@ -46,9 +46,9 @@
         <value>Task complete in {0:0.00} seconds</value>
     </data>
     <data name="WaitingIOSave" xml:space="preserve">
-        <value>Waiting on IO to save {0} files.</value>
+        <value>Waiting on IO to save {0} files. Runtime: {1:0}</value>
     </data>
     <data name="ProcessingFrame" xml:space="preserve">
-        <value>Processing frame {0} of {1}. {2:0.00} seconds elapsed of estimated {3:0} seconds. {4:0} seconds remaining.</value>
+        <value>Processing frame {0} of {1}. {2:0} seconds elapsed of estimated {3:0} seconds. {4:0} seconds remaining.</value>
     </data>
 </root>
