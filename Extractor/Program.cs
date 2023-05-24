@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using System.Reflection;
-using Extractor.Commands;
+﻿using Extractor.Commands;
 using FFMediaToolkit;
 using Spectre.Console;
 using TreeBasedCli;
@@ -11,20 +9,19 @@ public static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+
         try
         {
+
             FFmpegLoader.FFmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FFmpeg");
 
 
-            var assembly = Assembly.GetExecutingAssembly();
-            var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
-            var name = fvi.ProductName;
-            var version = fvi.FileVersion; // or fvi.ProductVersion
+
 
             var settings = new ArgumentHandlerSettings
             (
-                name ?? string.Empty,
-                version ?? string.Empty,
+                "IRSS Media Tools" ?? string.Empty,
+                $"{typeof(Program).Assembly.GetName().Version?.ToString()}",
                 new CommandTree(
                     CreateCommandTreeRoot(),
                     DependencyInjectionService.Instance)
@@ -41,7 +38,6 @@ public static class Program
         }
         catch (Exception ex)
         {
-            AnsiConsole.Status();
             AnsiConsole.WriteException(ex,
                 ExceptionFormats.ShortenPaths | ExceptionFormats.ShortenTypes |
                 ExceptionFormats.ShortenMethods | ExceptionFormats.ShowLinks);
@@ -63,7 +59,6 @@ public static class Program
             .WithChildCommand(extractCommand)
             .WithChildCommand(infoCommand)
             .Build();
-
 
         return branchCommand;
     }

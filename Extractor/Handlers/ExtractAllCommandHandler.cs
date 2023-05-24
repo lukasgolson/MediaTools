@@ -30,7 +30,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
         stopwatch.Stop();
 
-        AnsiConsole.WriteLine($"[green]Finished extracting frames in {Math.Round(stopwatch.ElapsedMilliseconds * 0.001, 2)} seconds.");
+        AnsiConsole.MarkupLineInterpolated($"[green]Finished extracting frames in {Math.Round(stopwatch.ElapsedMilliseconds * 0.001, 2)} seconds.[/]");
 
     }
 
