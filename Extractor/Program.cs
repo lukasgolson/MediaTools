@@ -1,4 +1,6 @@
-﻿using Extractor.Commands;
+﻿using System.Diagnostics;
+using System.Reflection;
+using Extractor.Commands;
 using FFMediaToolkit;
 using Spectre.Console;
 using TreeBasedCli;
@@ -9,32 +11,39 @@ public static class Program
 {
     private static async Task<int> Main(string[] args)
     {
-        FFmpegLoader.FFmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FFmpeg");
-
-
-        var settings = new ArgumentHandlerSettings
-        (
-            "IRSS Video Tools",
-            "0.0.1",
-            new CommandTree(
-                CreateCommandTreeRoot(),
-                DependencyInjectionService.Instance)
-        );
-
         try
         {
+            FFmpegLoader.FFmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FFmpeg");
+
+
+            var assembly = Assembly.GetExecutingAssembly();
+            var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
+            var version = fvi.FileVersion; // or fvi.ProductVersion
+
+            var settings = new ArgumentHandlerSettings
+            (
+                "IRSS Video Tools",
+                version ?? string.Empty,
+                new CommandTree(
+                    CreateCommandTreeRoot(),
+                    DependencyInjectionService.Instance)
+            );
+
+
             var argumentHandler = new ArgumentHandler(settings);
             await argumentHandler.HandleAsync(args);
         }
-        catch (MessageOnlyException e)
+        catch (MessageOnlyException ex)
         {
-            AnsiConsole.WriteLine(e.Message);
+            AnsiConsole.Markup($"[red]{ex.Message}[/]");
             return -1;
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
             AnsiConsole.Status();
-            AnsiConsole.WriteException(e);
+            AnsiConsole.WriteException(ex,
+                ExceptionFormats.ShortenPaths | ExceptionFormats.ShortenTypes |
+                ExceptionFormats.ShortenMethods | ExceptionFormats.ShowLinks);
             throw;
         }
 

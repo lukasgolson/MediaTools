@@ -1,4 +1,5 @@
-﻿using Extractor.Commands;
+﻿using System.Diagnostics;
+using Extractor.Commands;
 using Extractor.Extensions;
 using FFMediaToolkit.Decoding;
 using Spectre.Console;
@@ -11,6 +12,8 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
     public async Task HandleAsync(ExtractAllCommand.Arguments arguments, LeafCommand executedCommand)
     {
 
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
 
         await AnsiConsole.Progress()
             .AutoClear(false) // Do not remove the task list when done
@@ -25,6 +28,9 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
                 await ExtractFrames(arguments, framesProgressTask);
             });
 
+        stopwatch.Stop();
+
+        AnsiConsole.WriteLine($"[green]Finished extracting frames in {Math.Round(stopwatch.ElapsedMilliseconds * 0.001, 2)} seconds.");
 
     }
 
@@ -39,7 +45,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         progress.Increment(1);
     }
 
-    private async Task ExtractFrames(ExtractAllCommand.Arguments arguments, ProgressTask progress)
+    private Task ExtractFrames(ExtractAllCommand.Arguments arguments, ProgressTask progress)
     {
         var file = MediaFile.Open(arguments.InputFile);
 
@@ -47,7 +53,6 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
         var actualFrameCount = file.Video.Info.NumberOfFrames ?? 0;
         var finalFrameCount = MathF.Round(actualFrameCount * (1 - arguments.DropRatio));
         progress.MaxValue(finalFrameCount);
-
 
         progress.Description("[green]Extracting Frames[/]");
 
@@ -79,6 +84,8 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
             lastFrameIndex = frameIndex;
         }
         progress.IsIndeterminate(false).Description("[green]Extracting Frames[/]");
+
+        return Task.CompletedTask;
     }
 
     private static IEnumerable<Image<Bgr24>> GetFrames(MediaFile mediaFile, float dropRatio)
