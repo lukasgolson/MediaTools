@@ -7,15 +7,20 @@ namespace Extractor;
 
 public static class Program
 {
+    private static readonly CancellationTokenSource cts = new();
     private static async Task<int> Main(string[] args)
     {
 
+
+        Console.CancelKeyPress += delegate
+        {
+            Cleanup();
+        };
+
+
         try
         {
-
             FFmpegLoader.FFmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FFmpeg");
-
-
 
 
             var settings = new ArgumentHandlerSettings
@@ -43,6 +48,10 @@ public static class Program
                 ExceptionFormats.ShortenMethods | ExceptionFormats.ShowLinks);
             throw;
         }
+        finally
+        {
+            Cleanup();
+        }
 
         return 0;
     }
@@ -61,5 +70,11 @@ public static class Program
             .Build();
 
         return branchCommand;
+    }
+
+    private static void Cleanup()
+    {
+        AnsiConsole.Reset();
+        AnsiConsole.Cursor.Show(true);
     }
 }
