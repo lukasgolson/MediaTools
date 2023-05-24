@@ -1,88 +1,87 @@
-﻿using System.Diagnostics;
-using Extractor.Commands;
+﻿using Extractor.Commands;
 using Extractor.Extensions;
 using FFMediaToolkit.Decoding;
 using Spectre.Console;
 using TreeBasedCli;
+using TreeBasedCli.Exceptions;
 namespace Extractor.Handlers;
 
 public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Arguments>
 {
     public async Task HandleAsync(ExtractAllCommand.Arguments arguments, LeafCommand executedCommand)
     {
-        if (!Path.Exists(arguments.InputFile))
-        {
-            AnsiConsole.WriteLine(Resources.Resources.File_Does_Not_Exist);
-            return;
-        }
+
+
+        await AnsiConsole.Progress()
+            .AutoClear(false) // Do not remove the task list when done
+            .Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new RemainingTimeColumn(), new SpinnerColumn())
+            .StartAsync(async ctx =>
+            {
+                var checkArgumentsTask = ctx.AddTask("[green]Validating Command Arguments[/]", true, 2);
+                var framesProgressTask = ctx.AddTask("[green]Opening Media File[/]");
+
+                CheckArguments(arguments, checkArgumentsTask);
+
+                await ExtractFrames(arguments, framesProgressTask);
+            });
+
+
+    }
+
+    private static void CheckArguments(ExtractAllCommand.Arguments arguments, ProgressTask progress)
+    {
+        if (!File.Exists(arguments.InputFile))
+            throw new MessageOnlyException($"[red]Input file {arguments.InputFile} does not exist...");
+
+        progress.Increment(1);
 
         Directory.CreateDirectory(arguments.OutputFolder);
+        progress.Increment(1);
+    }
 
+    private async Task ExtractFrames(ExtractAllCommand.Arguments arguments, ProgressTask progress)
+    {
         var file = MediaFile.Open(arguments.InputFile);
 
-
+        // Determine video info required to calculate frame count for progress.
         var actualFrameCount = file.Video.Info.NumberOfFrames ?? 0;
         var finalFrameCount = MathF.Round(actualFrameCount * (1 - arguments.DropRatio));
-        AnsiConsole.WriteLine(Resources.Resources.Begin_Extraction, actualFrameCount, arguments.DropRatio, finalFrameCount);
+        progress.MaxValue(finalFrameCount);
 
-        AnsiConsole.Write(new TextPath(Path.GetFullPath(arguments.OutputFolder)));
 
-        var stopWatch = new Stopwatch();
-        stopWatch.Start();
+        progress.Description("[green]Extracting Frames[/]");
 
-        var frameIndex = 1;
-        ulong queued = 0;
+        ulong frameIndex = 0;
         ulong completed = 0;
-
         foreach (var frame in GetFrames(file, arguments.DropRatio))
         {
-            var imageName = $"{Path.GetFileNameWithoutExtension(arguments.InputFile)}_{frameIndex}.{arguments.OutputFormat}";
+            var imageName = $"{Path.GetFileNameWithoutExtension(arguments.InputFile)}_{frameIndex + 1}.{arguments.OutputFormat}";
             var output = Path.Join(arguments.OutputFolder, imageName);
-
-            queued++;
 
             async void SaveFrame()
             {
                 await frame.SaveAsync(output);
+                progress.Increment(1);
                 completed++;
             }
 
-
-
-
             _ = Task.Run(SaveFrame);
-
-            var stopWatchElapsedMilliseconds = stopWatch.ElapsedMilliseconds;
-            var avgFrameProcessingTime = stopWatchElapsedMilliseconds / frameIndex;
-            var totalTime = finalFrameCount * avgFrameProcessingTime;
-            double timeRemaining = totalTime - stopWatchElapsedMilliseconds;
-
-
-            AnsiConsole.Write("\r" + string.Format(Resources.Resources.ProcessingFrame, frameIndex, finalFrameCount, stopWatchElapsedMilliseconds * 0.001, totalTime * 0.001, Math.Max(timeRemaining * 0.001, 0d)));
-
-
             frameIndex++;
         }
 
+        ulong lastFrameIndex = 0;
+        // ReSharper disable once LoopVariableIsNeverChangedInsideLoop
+        while (frameIndex > completed)
+        {
+            if (frameIndex != lastFrameIndex)
+                progress.IsIndeterminate().Description($"[red] waiting on {frameIndex - completed} frame(s) to save[/]");
 
-        AnsiConsole.Write(Environment.NewLine);
-
-
-
-
-        while (queued > completed)
-            AnsiConsole.Write("\r" + string.Format(Resources.Resources.WaitingIOSave, queued - completed, stopWatch.ElapsedMilliseconds * 0.001));
-
-
-
-        stopWatch.Stop();
-
-        AnsiConsole.Write(Environment.NewLine);
-        AnsiConsole.WriteLine(Resources.Resources.TaskCompleteText, stopWatch.ElapsedMilliseconds * 0.001);
-
-
+            lastFrameIndex = frameIndex;
+        }
+        progress.IsIndeterminate(false).Description("[green]Extracting Frames[/]");
     }
-    private IEnumerable<Image<Bgr24>> GetFrames(MediaFile mediaFile, float dropRatio)
+
+    private static IEnumerable<Image<Bgr24>> GetFrames(MediaFile mediaFile, float dropRatio)
     {
         var absoluteDropRatio = Math.Abs(dropRatio);
         float dropFrameNumber = 0;
