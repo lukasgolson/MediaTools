@@ -18,11 +18,12 @@ public static class Program
 
             var assembly = Assembly.GetExecutingAssembly();
             var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
+            var name = fvi.ProductName;
             var version = fvi.FileVersion; // or fvi.ProductVersion
 
             var settings = new ArgumentHandlerSettings
             (
-                "IRSS Video Tools",
+                name ?? string.Empty,
                 version ?? string.Empty,
                 new CommandTree(
                     CreateCommandTreeRoot(),
