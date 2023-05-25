@@ -30,14 +30,14 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
                 framesProgressTask.MaxValue(finalFrameCount == 0 ? 1 : finalFrameCount);
 
-                AnsiConsole.MarkupLineInterpolated($"[green]Extracting {finalFrameCount} frames from {arguments.InputFile} to {arguments.OutputFolder}.[/]");
+                AnsiConsole.MarkupLineInterpolated($"Extracting {finalFrameCount} frames from {arguments.InputFile} to {arguments.OutputFolder}.");
 
                 await ExtractFrames(arguments, framesProgressTask);
             });
 
         stopwatch.Stop();
 
-        AnsiConsole.MarkupLineInterpolated($"[green]Finished extracting {finalFrameCount} frames in {Math.Round(stopwatch.ElapsedMilliseconds * 0.001, 2)} seconds.[/]");
+        AnsiConsole.MarkupLineInterpolated($"Finished extracting {finalFrameCount} frames in {Math.Round(stopwatch.ElapsedMilliseconds * 0.001, 2)} seconds.");
     }
 
     private static void CheckArguments(ExtractAllCommand.Arguments arguments, ProgressTask progress)
