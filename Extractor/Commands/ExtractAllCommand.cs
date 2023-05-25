@@ -60,7 +60,7 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
                 inputFile,
                 outputFolder,
                 outputFormat,
-                dropRatio
+                Math.Abs(dropRatio)
             );
 
             return new SuccessfulParseResult<Arguments>(result);

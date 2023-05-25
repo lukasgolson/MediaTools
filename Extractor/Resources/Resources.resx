@@ -51,4 +51,7 @@
     <data name="ProcessingFrame" xml:space="preserve">
         <value>Processing frame {0} of {1}. {2:0} seconds elapsed of estimated {3:0} seconds. {4:0} seconds remaining.</value>
     </data>
+    <data name="DropRatioRequirements" xml:space="preserve">
+        <value>Drop ratio must be between 0 and 1</value>
+    </data>
 </root>

@@ -26,23 +26,22 @@ public static class MediaFileHelpers
 
     public static IEnumerable<Image<Bgr24>> GetFrames(this MediaFile mediaFile, float dropRatio)
     {
-        var absoluteDropRatio = Math.Abs(dropRatio);
-        float dropFrameNumber = 0;
-
-        var dropFrames = false;
-        if (absoluteDropRatio > 0)
+        switch (dropRatio)
         {
-            dropFrameNumber = 1 / absoluteDropRatio;
-            dropFrames = true;
+            case < 0 or > 1:
+                throw new ArgumentException(Resources.Resources.DropRatioRequirements, nameof(dropRatio));
+            case >= 1:
+                yield break;
         }
 
+        var keepFrameNumber = dropRatio > 0 ? 1 / (1 - dropRatio) : 1;
 
         uint frameCounter = 0;
         while (mediaFile.Video.TryGetNextFrame(out var imageData))
         {
             frameCounter++;
 
-            if (dropFrames && frameCounter % dropFrameNumber != 0)
+            if (dropRatio < 1 && frameCounter % (int)keepFrameNumber != 0)
                 continue;
 
             yield return imageData.ToBitmap();

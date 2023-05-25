@@ -69,6 +69,15 @@ namespace Extractor.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Drop ratio must be between 0 and 1.
+        /// </summary>
+        internal static string DropRatioRequirements {
+            get {
+                return ResourceManager.GetString("DropRatioRequirements", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to File does not exist....
         /// </summary>
         internal static string File_Does_Not_Exist {
