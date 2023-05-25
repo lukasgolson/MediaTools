@@ -46,7 +46,7 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
         {
             var inputFile = arguments.GetArgument(InputFileLabel).ExpectedAsSinglePathToExistingFile();
             var outputFolder = arguments.GetArgumentOrNull(OutputFolderLabel)?.ExpectedAsSingleValue() ?? Path.GetFileNameWithoutExtension(inputFile);
-            var outputFormat = (arguments.GetArgumentOrNull(OutputImageFormatLabel)?.ExpectedAsSingleValue() ?? "jpg").Replace(".", "", StringComparison.InvariantCultureIgnoreCase);
+            var outputFormat = (arguments.GetArgumentOrNull(OutputImageFormatLabel)?.ExpectedAsSingleValue() ?? "jpg").ToLowerInvariant().Replace(".", "", StringComparison.InvariantCultureIgnoreCase);
             var dropRatioString = arguments.GetArgumentOrNull(OutputFrameDropRatioLabel)?.ExpectedAsSingleValue();
 
             float dropRatio;

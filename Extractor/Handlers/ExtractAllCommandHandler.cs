@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using Extractor.Commands;
-using Extractor.Extensions;
 using FFMediaToolkit.Decoding;
 using Spectre.Console;
 using TreeBasedCli;
@@ -17,13 +16,15 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
         await AnsiConsole.Progress()
             .AutoClear(false) // Do not remove the task list when done
-            .Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new RemainingTimeColumn(), new SpinnerColumn())
+            .Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new ElapsedTimeColumn(), new RemainingTimeColumn(), new SpinnerColumn())
             .StartAsync(async ctx =>
             {
-                var checkArgumentsTask = ctx.AddTask("[green]Validating Command Arguments[/]", true, 2);
+                var checkArgumentsProgressTask = ctx.AddTask("[green]Validating Command Arguments[/]", true, 2);
+                var infoProgressTask = ctx.AddTask("[green]Opening Media File[/]", true, 1);
                 var framesProgressTask = ctx.AddTask("[green]Opening Media File[/]");
 
-                CheckArguments(arguments, checkArgumentsTask);
+                CheckArguments(arguments, checkArgumentsProgressTask);
+                PrintFileInfo(arguments, infoProgressTask);
 
                 await ExtractFrames(arguments, framesProgressTask);
             });
@@ -42,7 +43,17 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
         Directory.CreateDirectory(arguments.OutputFolder);
         progress.Increment(1);
+        progress.StopTask();
     }
+
+    private static void PrintFileInfo(ExtractAllCommand.Arguments arguments, ProgressTask progress)
+    {
+        var file = MediaFile.Open(arguments.InputFile);
+        file.PrintFileInfo();
+        progress.Increment(1);
+        progress.StopTask();
+    }
+
 
     private Task ExtractFrames(ExtractAllCommand.Arguments arguments, ProgressTask progress)
     {
@@ -57,7 +68,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
 
         ulong frameIndex = 0;
         ulong completed = 0;
-        foreach (var frame in GetFrames(file, arguments.DropRatio))
+        foreach (var frame in file.GetFrames(arguments.DropRatio))
         {
             var imageName = $"{Path.GetFileNameWithoutExtension(arguments.InputFile)}_{frameIndex + 1}.{arguments.OutputFormat}";
             var output = Path.Join(arguments.OutputFolder, imageName);
@@ -73,42 +84,18 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ar
             frameIndex++;
         }
 
-        ulong lastFrameIndex = 0;
+        ulong lastFrameCount = 0;
         // ReSharper disable once LoopVariableIsNeverChangedInsideLoop
         while (frameIndex > completed)
         {
-            if (frameIndex != lastFrameIndex)
-                progress.IsIndeterminate().Description($"[red] waiting on {frameIndex - completed} frame(s) to save[/]");
+            var frameCount = frameIndex - completed;
+            if (frameCount != lastFrameCount)
+                progress.Description($"[red] waiting on {frameCount} frame(s) to save[/]");
 
-            lastFrameIndex = frameIndex;
+            lastFrameCount = frameCount;
         }
-        progress.IsIndeterminate(false).Description("[green]Extracting Frames[/]");
+        progress.IsIndeterminate().Description("[green]Extracting Frames[/]");
 
         return Task.CompletedTask;
-    }
-
-    private static IEnumerable<Image<Bgr24>> GetFrames(MediaFile mediaFile, float dropRatio)
-    {
-        var absoluteDropRatio = Math.Abs(dropRatio);
-        float dropFrameNumber = 0;
-
-        var dropFrames = false;
-        if (absoluteDropRatio > 0)
-        {
-            dropFrameNumber = 1 / absoluteDropRatio;
-            dropFrames = true;
-        }
-
-
-        uint frameCounter = 0;
-        while (mediaFile.Video.TryGetNextFrame(out var imageData))
-        {
-            frameCounter++;
-
-            if (dropFrames && frameCounter % dropFrameNumber != 0)
-                continue;
-
-            yield return imageData.ToBitmap();
-        }
     }
 }

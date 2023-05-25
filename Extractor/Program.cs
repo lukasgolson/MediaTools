@@ -10,17 +10,17 @@ public static class Program
     private static readonly CancellationTokenSource cts = new();
     private static async Task<int> Main(string[] args)
     {
-
-
-        Console.CancelKeyPress += delegate
-        {
-            Cleanup();
-        };
-
-
         try
         {
+            Console.CancelKeyPress += delegate
+            {
+                Cleanup();
+            };
+
+
+            // Ensure that FFmpeg is loaded from the correct path.
             FFmpegLoader.FFmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FFmpeg");
+
 
 
             var settings = new ArgumentHandlerSettings
