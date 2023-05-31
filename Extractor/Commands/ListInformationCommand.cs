@@ -4,9 +4,6 @@ namespace Extractor.Commands;
 
 public class ListInformationCommand : LeafCommand<ListInformationCommand.Arguments, ListInformationCommand.Parser, ListInfoCommandHandler>
 {
-    private const string InputFileLabel = "--input";
-
-
     public ListInformationCommand() : base(
         "info",
         new[]
@@ -15,7 +12,7 @@ public class ListInformationCommand : LeafCommand<ListInformationCommand.Argumen
         },
         new[]
         {
-            new CommandOption(InputFileLabel, new[]
+            new CommandOption(CommandOptions.InputLabel, new[]
             {
                 "Required. The input video file."
             })
@@ -30,7 +27,7 @@ public class ListInformationCommand : LeafCommand<ListInformationCommand.Argumen
     {
         public IParseResult<Arguments> Parse(CommandArguments arguments)
         {
-            var inputFile = arguments.GetArgument(InputFileLabel).ExpectedAsSinglePathToExistingFile();
+            var inputFile = arguments.GetArgument(CommandOptions.InputLabel).ExpectedAsSinglePathToExistingFile();
 
             return new SuccessfulParseResult<Arguments>(new Arguments(inputFile));
         }

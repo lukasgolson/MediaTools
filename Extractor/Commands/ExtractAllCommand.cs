@@ -2,14 +2,8 @@
 using TreeBasedCli;
 namespace Extractor.Commands;
 
-public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, ExtractAllCommand.Parser, ExtractAllCommandHandler>
+public class ExtractAllCommand : LeafCommand<ExtractAllCommand.ExtractAllArguments, ExtractAllCommand.Parser, ExtractAllCommandHandler>
 {
-    private const string InputFileLabel = "--input";
-    private const string OutputFolderLabel = "--output";
-    private const string OutputImageFormatLabel = "--format";
-    private const string OutputFrameDropRatioLabel = "--drop";
-
-
     public ExtractAllCommand() : base(
         "extract",
         new[]
@@ -18,19 +12,10 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
         },
         new[]
         {
-            new CommandOption(InputFileLabel, new[]
-            {
-                "Required. The input video file."
-            }),
-            new CommandOption(OutputFolderLabel, new[]
-            {
-                "The output path. Default: Name of the input file without extension."
-            }),
-            new CommandOption(OutputImageFormatLabel, new[]
-            {
-                "The output image file format (e.g., .png or .jpg). Default: jpg"
-            }),
-            new CommandOption(OutputFrameDropRatioLabel, new[]
+            CommandOptions.InputOption,
+            CommandOptions.OutputOption,
+            CommandOptions.OutputFormatOption,
+            new CommandOption(CommandOptions.OutputFrameDropRatioLabel, new[]
             {
                 "The ratio of frames to drop from the output. (e.g., 0 = no drop, 0.5 = half, 1 = all). Default: 0"
             })
@@ -38,16 +23,16 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
     {
     }
 
-    public record Arguments(string InputFile, string OutputFolder, string OutputFormat, float DropRatio) : IParsedCommandArguments;
+    public record ExtractAllArguments(string InputFile, string OutputFolder, string OutputFormat, float DropRatio) : IParsedCommandArguments;
 
-    public class Parser : ICommandArgumentParser<Arguments>
+    public class Parser : ICommandArgumentParser<ExtractAllArguments>
     {
-        public IParseResult<Arguments> Parse(CommandArguments arguments)
+        public IParseResult<ExtractAllArguments> Parse(CommandArguments arguments)
         {
-            var inputFile = arguments.GetArgument(InputFileLabel).ExpectedAsSinglePathToExistingFile();
-            var outputFolder = arguments.GetArgumentOrNull(OutputFolderLabel)?.ExpectedAsSingleValue() ?? Path.GetFileNameWithoutExtension(inputFile);
-            var outputFormat = (arguments.GetArgumentOrNull(OutputImageFormatLabel)?.ExpectedAsSingleValue() ?? "jpg").ToLowerInvariant().Replace(".", "", StringComparison.InvariantCultureIgnoreCase);
-            var dropRatioString = arguments.GetArgumentOrNull(OutputFrameDropRatioLabel)?.ExpectedAsSingleValue();
+            var inputFile = arguments.GetArgument(CommandOptions.InputLabel).ExpectedAsSinglePathToExistingFile();
+            var outputFolder = arguments.GetArgumentOrNull(CommandOptions.OutputLabel)?.ExpectedAsSingleValue() ?? Path.GetFileNameWithoutExtension(inputFile);
+            var outputFormat = (arguments.GetArgumentOrNull(CommandOptions.OutputFormatLabel)?.ExpectedAsSingleValue() ?? "jpg").ToLowerInvariant().Replace(".", "", StringComparison.InvariantCultureIgnoreCase);
+            var dropRatioString = arguments.GetArgumentOrNull(CommandOptions.OutputFrameDropRatioLabel)?.ExpectedAsSingleValue();
 
             float dropRatio;
 
@@ -56,14 +41,14 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.Arguments, Extrac
             else
                 dropRatio = 0;
 
-            var result = new Arguments(
+            var result = new ExtractAllArguments(
                 inputFile,
                 outputFolder,
                 outputFormat,
                 Math.Abs(dropRatio)
             );
 
-            return new SuccessfulParseResult<Arguments>(result);
+            return new SuccessfulParseResult<ExtractAllArguments>(result);
         }
     }
 }
