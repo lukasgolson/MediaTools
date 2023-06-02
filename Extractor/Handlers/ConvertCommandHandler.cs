@@ -1,6 +1,7 @@
 ﻿using Extractor.Commands;
 using Spectre.Console;
 using TreeBasedCli;
+using TreeBasedCli.Exceptions;
 namespace Extractor.Handlers;
 
 public class ConvertCommandHandler : ILeafCommandHandler<ConvertCommand.ConvertCommandArguments>
@@ -13,10 +14,12 @@ public class ConvertCommandHandler : ILeafCommandHandler<ConvertCommand.ConvertC
             .StartAsync(async ctx =>
             {
 
+                var checkArgumentsProgressTask = ctx.AddTask("[green]Validating Command Arguments[/]", true, 2);
                 var buildImageListTask = ctx.AddTask("[green]Building Image List[/]");
                 var convertProgressTask = ctx.AddTask("[green]Converting Images[/]");
 
 
+                CheckArguments(arguments, checkArgumentsProgressTask);
 
                 var images = await BuildImageList(arguments.InputFolder, arguments.InputFormat, buildImageListTask);
 
@@ -26,6 +29,20 @@ public class ConvertCommandHandler : ILeafCommandHandler<ConvertCommand.ConvertC
 
     }
 
+    private static void CheckArguments(ConvertCommand.ConvertCommandArguments arguments, ProgressTask progress)
+    {
+        if (!Directory.Exists(arguments.InputFolder))
+            throw new MessageOnlyException($"[red]Input directory {arguments.InputFolder} does not exist...[/]");
+
+        progress.Increment(1);
+
+        Directory.CreateDirectory(arguments.OutputFolder);
+        progress.Increment(1);
+
+
+
+        progress.Complete();
+    }
 
     private static Task<string[]> BuildImageList(string inputFolder, string inputFormat, ProgressTask progressTask)
     {
