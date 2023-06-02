@@ -13,16 +13,42 @@ public class ConvertCommandHandler : ILeafCommandHandler<ConvertCommand.ConvertC
             .StartAsync(async ctx =>
             {
 
-                var progressTask = ctx.AddTask("[green]Converting Images[/]");
+                var buildImageListTask = ctx.AddTask("[green]Building Image List[/]");
+                var convertProgressTask = ctx.AddTask("[green]Converting Images[/]");
 
 
-                await ConvertImages(arguments, progressTask);
+
+                var images = await BuildImageList(arguments.InputFolder, arguments.InputFormat, buildImageListTask);
+
+                await ConvertImages(images, arguments.OutputFolder, arguments.OutputFormat, convertProgressTask);
 
             });
 
     }
-    private async Task ConvertImages(ConvertCommand.ConvertCommandArguments arguments, ProgressTask progressTask)
-    {
 
+
+    private static Task<string[]> BuildImageList(string inputFolder, string inputFormat, ProgressTask progressTask)
+    {
+        progressTask.IsIndeterminate = true;
+        var files = Directory.GetFiles(inputFolder, $"*.{inputFormat}", SearchOption.AllDirectories);
+
+        progressTask.Complete();
+
+        return Task.FromResult(files);
+    }
+
+    private static async Task ConvertImages(IReadOnlyCollection<string> files, string outputPath, string outputFormat, ProgressTask progressTask)
+    {
+        progressTask.MaxValue = files.Count;
+
+
+        await Parallel.ForEachAsync(files, async (file, cancellationToken) =>
+        {
+            using var image = await Image.LoadAsync(file, cancellationToken);
+            await image.SaveAsync(Path.Combine(outputPath, $"{Path.GetFileNameWithoutExtension(file)}.{outputFormat}"), cancellationToken);
+            progressTask.Increment(1);
+        });
+
+        progressTask.Complete();
     }
 }

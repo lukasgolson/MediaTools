@@ -7,6 +7,7 @@ public static class ProgressTaskExtensions
     public static ProgressTask Complete(this ProgressTask task)
     {
         task.Increment(task.MaxValue - task.Value);
+        task.IsIndeterminate = false;
         task.StopTask();
         return task;
     }
