@@ -25,7 +25,7 @@ public static class Program
 
             var settings = new ArgumentHandlerSettings
             (
-                "IRSS Media Tools" ?? string.Empty,
+                "IRSS Media Tools",
                 $"{typeof(Program).Assembly.GetName().Version?.ToString()}",
                 new CommandTree(
                     CreateCommandTreeRoot(),
@@ -60,14 +60,18 @@ public static class Program
     {
         Command extractCommand = new ExtractAllCommand();
         Command infoCommand = new ListInformationCommand();
+        Command convertCommand = new ConvertCommand();
 
-        var branchCommand = new BranchCommandBuilder("").WithDesription(new[]
+        var branchCommand = new BranchCommandBuilder("")
+            .WithDesription(new[]
             {
-                "All video extraction commands"
+                "IRSS Media Tools is a command-line tool for extracting and converting media files.", "Unless otherwise stated, all commands will use the current working directory as the input/output folder."
             })
             .WithChildCommand(extractCommand)
             .WithChildCommand(infoCommand)
+            .WithChildCommand(convertCommand)
             .Build();
+
 
         return branchCommand;
     }

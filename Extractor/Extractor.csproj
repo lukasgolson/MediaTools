@@ -9,14 +9,14 @@
         <AssemblyName>IRSSMediaTools</AssemblyName>
         <Title>IRSS Media Tools</Title>
         <Authors>Lukas Olson</Authors>
-        <SignAssembly>true</SignAssembly>
         <AssemblyOriginatorKeyFile>Resources\OlsonKey.snk</AssemblyOriginatorKeyFile>
         <ApplicationIcon>Resources\logo.ico</ApplicationIcon>
         <Company>IRSS</Company>
-        <AssemblyVersion>0.1.0</AssemblyVersion>
+        <AssemblyVersion>0.2.0.0</AssemblyVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <LangVersion>preview</LangVersion>
         <Product>IRSS Media Tools</Product>
+        <SignAssembly>true</SignAssembly>
     </PropertyGroup>
 
     <PropertyGroup>
