@@ -8,6 +8,8 @@ public static class CommandOptions
     public const string InputFormatLabel = "--informat";
     public const string OutputFormatLabel = "--format";
     public const string OutputFrameDropRatioLabel = "--drop";
+    public const string FrameRate = "--fps";
+    public const string Duration = "--duration";
 
 
     public static readonly CommandOption InputOption = new(InputLabel, new[]
@@ -17,7 +19,7 @@ public static class CommandOptions
 
     public static readonly CommandOption OutputOption = new(OutputLabel, new[]
     {
-        "The output path. Default: Name of the input without extension."
+        "The output path. Default: Name of the input file with the relevant extension."
     });
 
     public static readonly CommandOption InputFormatOption = new(InputFormatLabel, new[]
@@ -28,5 +30,15 @@ public static class CommandOptions
     public static readonly CommandOption OutputFormatOption = new(OutputFormatLabel, new[]
     {
         "The output image file format (e.g., .png or .jpg). Default: jpg"
+    });
+
+    public static readonly CommandOption OutputFrameRate = new(FrameRate, new[]
+    {
+        "The output frame rate. Default: 30"
+    });
+
+    public static readonly CommandOption OutputDuration = new(Duration, new[]
+    {
+        "The output duration. Default: 1"
     });
 }

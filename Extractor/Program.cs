@@ -65,11 +65,12 @@ public static class Program
         var branchCommand = new BranchCommandBuilder("")
             .WithDesription(new[]
             {
-                "IRSS Media Tools is a command-line tool for extracting and converting media files.", "Unless otherwise stated, all commands will use the current working directory as the input/output folder."
+                "IRSS Media Tools is a command-line tool for extracting, converting, and working with media files.", "Unless otherwise stated, all commands will use the current working directory as the input/output folder."
             })
             .WithChildCommand(extractCommand)
             .WithChildCommand(infoCommand)
             .WithChildCommand(convertCommand)
+            .WithChildCommand(new AnimateCommand())
             .Build();
 
 
