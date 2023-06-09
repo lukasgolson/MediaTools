@@ -12,7 +12,10 @@ public class AnimateCommand : LeafCommand<AnimateCommand.AnimateArguments, Anima
         },
         new[]
         {
-            CommandOptions.InputOption, CommandOptions.OutputOption
+            CommandOptions.InputOption,
+            CommandOptions.OutputOption,
+            CommandOptions.OutputFrameRate,
+            CommandOptions.OutputDuration
         })
     {
     }

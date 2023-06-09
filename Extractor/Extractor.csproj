@@ -83,6 +83,9 @@
         <None Update="FFmpeg\swscale-6.dll">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
+        <None Update="README.md">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
     <ItemGroup>
