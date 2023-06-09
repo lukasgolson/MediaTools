@@ -1,7 +1,9 @@
 ﻿# IRSS Media Tools
 
-Welcome to **IRSS Media Tools**! This is a versatile media manipulation tool that helps you process audio and video
-files efficiently. IRSS Media Tools leverages the power of well-known libraries like FFmpeg and ImageSharp to deliver
+Welcome to the **IRSS Media Tools**! A package of versatile media manipulation CLI tools that help you process audio and
+video
+files efficiently. The IRSS Media Tools leverage the power of trusted and well-known libraries like FFmpeg and
+ImageSharp to deliver
 high-quality results.
 
 ## License Information
@@ -32,12 +34,12 @@ directory without specifying the full path to `IRSSMediaTools.exe`.
 
 ## Usage
 
-To use IRSS Media Tools, open a command line interface (e.g., CMD.exe) and run `IRSSMediaTools.exe`.
+To use the IRSS Media Tools, open a command line interface (e.g., CMD.exe) and run `IRSSMediaTools.exe`.
 
 Example:
 
 ```shell
-IRSSMediaTools.exe [options] [input file] [output file]
+IRSSMediaTools.exe [option] --input [input file] --output [output file]
 ```
 
 For a list of available options and their descriptions, you can run the following command:
@@ -55,7 +57,8 @@ hesitate to reach out to Lukas Olson at [lukas.olson@ubc.ca](mailto:lukas.olson@
 
 ## Contributing
 
-IRSS Media Tools is an open project and contributions are welcome. If you are interested in contributing, please contact
-Lukas Olson for more information on how you can help improve IRSS Media Tools.
+The IRSS Media Tools are an open project and contributions are welcome. If you are interested in contributing, please
+contact
+Lukas Olson for more information on how you can help improve the IRSS Media Tools.
 
-Thank you for using IRSS Media Tools!
+Thank you for using the IRSS Media Tools!

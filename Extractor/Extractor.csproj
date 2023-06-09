@@ -16,7 +16,6 @@
         <NeutralLanguage>en</NeutralLanguage>
         <LangVersion>preview</LangVersion>
         <Product>IRSS Media Tools</Product>
-        <SignAssembly>true</SignAssembly>
     </PropertyGroup>
 
     <PropertyGroup>
