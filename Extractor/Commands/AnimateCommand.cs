@@ -20,7 +20,7 @@ public class AnimateCommand : LeafCommand<AnimateCommand.AnimateArguments, Anima
     {
     }
 
-    public record AnimateArguments(string InputFile, string OutputFile, int fps, float duration) : IParsedCommandArguments;
+    public record AnimateArguments(string InputFile, string OutputFile, int length, int Fps, float Duration) : IParsedCommandArguments;
 
     public class Parser : ICommandArgumentParser<AnimateArguments>
     {
@@ -28,21 +28,27 @@ public class AnimateCommand : LeafCommand<AnimateCommand.AnimateArguments, Anima
         {
             var inputFile = arguments.GetArgument(CommandOptions.InputLabel).ExpectedAsSinglePathToExistingFile();
             var outputFile = arguments.GetArgumentOrNull(CommandOptions.OutputLabel)?.ExpectedAsSingleValue() ?? Path.GetFileNameWithoutExtension(inputFile) + ".gif";
-            var FPS = arguments.GetArgumentOrNull(CommandOptions.FrameRate)?.ExpectedAsSingleValue() ?? "30";
-            var Duration = arguments.GetArgumentOrNull(CommandOptions.Duration)?.ExpectedAsSingleValue() ?? "1";
+            var fps = arguments.GetArgumentOrNull(CommandOptions.FrameRateLabel)?.ExpectedAsSingleValue() ?? "30";
+            var dur = arguments.GetArgumentOrNull(CommandOptions.DurationLabel)?.ExpectedAsSingleValue() ?? "1";
 
+            var inputLength = arguments.GetArgumentOrNull(CommandOptions.LengthLabel)?.ExpectedAsSingleValue() ?? "256";
 
             var framesPerSecond = 30;
-            if (int.TryParse(FPS, out var fpsInt))
-                framesPerSecond = fpsInt;
+            if (int.TryParse(fps, out var fpsInt))
+                framesPerSecond = Math.Abs(fpsInt);
 
             float duration = 1;
-            if (float.TryParse(Duration, out var durationInt))
-                duration = durationInt;
+            if (float.TryParse(dur, out var durationFloat))
+                duration = MathF.Abs(durationFloat);
+
+            var length = 256;
+            if (int.TryParse(inputLength, out var lengthInt))
+                length = Math.Abs(lengthInt);
 
             var result = new AnimateArguments(
                 inputFile,
                 outputFile,
+                length,
                 framesPerSecond,
                 duration
             );

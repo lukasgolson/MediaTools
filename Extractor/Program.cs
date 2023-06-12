@@ -46,7 +46,6 @@ public static class Program
             AnsiConsole.WriteException(ex,
                 ExceptionFormats.ShortenPaths | ExceptionFormats.ShortenTypes |
                 ExceptionFormats.ShortenMethods | ExceptionFormats.ShowLinks);
-            throw;
         }
         finally
         {

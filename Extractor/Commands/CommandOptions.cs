@@ -8,8 +8,10 @@ public static class CommandOptions
     public const string InputFormatLabel = "--informat";
     public const string OutputFormatLabel = "--format";
     public const string OutputFrameDropRatioLabel = "--drop";
-    public const string FrameRate = "--fps";
-    public const string Duration = "--duration";
+    public const string FrameRateLabel = "--fps";
+    public const string DurationLabel = "--duration";
+
+    public const string LengthLabel = "--length";
 
 
     public static readonly CommandOption InputOption = new(InputLabel, new[]
@@ -32,13 +34,18 @@ public static class CommandOptions
         "The output image file format (e.g., .png or .jpg). Default: jpg"
     });
 
-    public static readonly CommandOption OutputFrameRate = new(FrameRate, new[]
+    public static readonly CommandOption OutputFrameRate = new(FrameRateLabel, new[]
     {
         "The output frame rate. Default: 30"
     });
 
-    public static readonly CommandOption OutputDuration = new(Duration, new[]
+    public static readonly CommandOption OutputDuration = new(DurationLabel, new[]
     {
         "The output duration. Default: 1"
+    });
+
+    public static readonly CommandOption OutputLength = new(LengthLabel, new[]
+    {
+        "The output length for square resolutions. Defaults to 128."
     });
 }
