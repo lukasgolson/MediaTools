@@ -15,7 +15,8 @@ public class AnimateCommand : LeafCommand<AnimateCommand.AnimateArguments, Anima
             CommandOptions.InputOption,
             CommandOptions.OutputOption,
             CommandOptions.OutputFrameRate,
-            CommandOptions.OutputDuration
+            CommandOptions.OutputDuration,
+            CommandOptions.OutputLength
         })
     {
     }
