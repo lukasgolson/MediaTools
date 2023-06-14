@@ -1,4 +1,5 @@
-﻿namespace Extractor;
+﻿using System.Numerics;
+namespace Extractor;
 
 public static class ImageExtensions
 {
@@ -42,5 +43,20 @@ public static class ImageExtensions
         });
 
         return image;
+    }
+
+    public static Image ClipTransparency(this Image src, float threshold)
+    {
+        src.Mutate(c => c.ProcessPixelRowsAsVector4(row =>
+        {
+            foreach (ref var pixel in row)
+                pixel = pixel.W < threshold ? Vector4.Zero : pixel with
+                {
+                    W = 1
+                };
+        }));
+
+
+        return src;
     }
 }

@@ -19,6 +19,7 @@ public class AnimateCommandHandler : ILeafCommandHandler<AnimateCommand.AnimateA
                 var loadImageProgressTask = ctx.AddTask("[green]Loading Media File[/]", false, 2);
                 var framesProgressTask = ctx.AddTask("[green]Animating Frames[/]", false);
                 var downscalingProgressTask = ctx.AddTask("[green]Downscaling Frames[/]", false);
+                var transparencyProgressTask = ctx.AddTask("[green]Cleaning Transparency[/]", false);
                 var renderingProgressTask = ctx.AddTask("[green]Constructing Gif[/]", false);
                 var savingProgressTask = ctx.AddTask("[green]Encoding Gif[/]", false);
 
@@ -33,7 +34,9 @@ public class AnimateCommandHandler : ILeafCommandHandler<AnimateCommand.AnimateA
 
                 var images = await GenerateRotatedFrames(image, frameCount, framesProgressTask);
 
-                await DownscaleImages(images, KnownResamplers.MitchellNetravali, arguments.length, downscalingProgressTask);
+                await DownscaleImages(images, KnownResamplers.Robidoux, arguments.length, downscalingProgressTask);
+
+                await ClipTransparencyonImages(images, 0.5f, transparencyProgressTask);
 
 
                 var gif = await RenderGif(images, arguments.Fps, renderingProgressTask);
@@ -130,6 +133,22 @@ public class AnimateCommandHandler : ILeafCommandHandler<AnimateCommand.AnimateA
         return Task.CompletedTask;
     }
 
+
+    private static Task ClipTransparencyonImages(List<Image> images, float threshold, ProgressTask progressTask)
+    {
+        progressTask.MaxValue = images.Count;
+        progressTask.StartTask();
+
+        foreach (var image in images)
+        {
+            image.ClipTransparency(threshold);
+
+            progressTask.Increment(1);
+        }
+
+        progressTask.Complete();
+        return Task.CompletedTask;
+    }
 
     private static Task<Image> RenderGif(IReadOnlyList<Image> images, int framesPerSecond, ProgressTask progressTask)
     {
