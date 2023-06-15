@@ -36,7 +36,7 @@ public static class CommandOptions
 
     public static readonly CommandOption OutputFrameRate = new(FrameRateLabel, new[]
     {
-        "The output frame rate. Default: 30"
+        "The output frame rate. Defaults to 30"
     });
 
     public static readonly CommandOption OutputDuration = new(DurationLabel, new[]

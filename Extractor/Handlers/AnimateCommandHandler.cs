@@ -11,6 +11,12 @@ public class AnimateCommandHandler : ILeafCommandHandler<AnimateCommand.AnimateA
 {
     public async Task HandleAsync(AnimateCommand.AnimateArguments arguments, LeafCommand executedCommand)
     {
+
+
+
+        var numberOfFrames = (int)(arguments.Duration * arguments.Fps);
+        var frameDelay = (int)Math.Floor(1.0 / arguments.Fps * 100);
+
         await AnsiConsole.Progress()
             .AutoClear(false) // Do not remove the task list when done
             .Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new ElapsedTimeColumn(), new RemainingTimeColumn(), new SpinnerColumn())
@@ -26,20 +32,14 @@ public class AnimateCommandHandler : ILeafCommandHandler<AnimateCommand.AnimateA
 
                 var image = await LoadImageFile(arguments.InputFile, loadImageProgressTask);
 
-
-
-
-                var frameCount = (int)(arguments.Fps * arguments.Duration);
-
-
-                var images = await GenerateRotatedFrames(image, frameCount, framesProgressTask);
+                var images = await GenerateRotatedFrames(image, numberOfFrames, framesProgressTask);
 
                 await DownscaleImages(images, KnownResamplers.Robidoux, arguments.length, downscalingProgressTask);
 
                 await ClipTransparencyonImages(images, 0.5f, transparencyProgressTask);
 
 
-                var gif = await RenderGif(images, arguments.Fps, renderingProgressTask);
+                var gif = await RenderGif(images, frameDelay, renderingProgressTask);
 
 
                 await SaveGif(gif, arguments.OutputFile, savingProgressTask);
@@ -80,15 +80,11 @@ public class AnimateCommandHandler : ILeafCommandHandler<AnimateCommand.AnimateA
 
         for (var i = 0; i < frameCount; i++)
         {
-            var baseImage = new Image<Rgba32>(image.Width, image.Height);
-
+            var background = new Image<Rgba32>(image.Width, image.Height);
+            background.Mutate(x => x.BackgroundColor(Color.Transparent));
 
 
             var rotationAngle = 360 / frameCount * i;
-
-
-            baseImage.Mutate(x => x.BackgroundColor(Color.Transparent));
-
 
             var foreground = image.Clone(x =>
             {
@@ -97,16 +93,15 @@ public class AnimateCommandHandler : ILeafCommandHandler<AnimateCommand.AnimateA
             });
 
             var originalCenterpoint = new Vector2(image.Width, image.Height) / 2;
-
-            var centerpoint = new Vector2(foreground.Width, foreground.Height) / 2;
-
-
-            var offset = originalCenterpoint - centerpoint;
+            var newCenterpoint = new Vector2(foreground.Width, foreground.Height) / 2;
 
 
-            baseImage.Mutate(x => x.DrawImage(foreground, new Point((int)offset.X, (int)offset.Y), 1f));
+            var offset = originalCenterpoint - newCenterpoint;
 
-            images.Add(baseImage);
+
+            background.Mutate(x => x.DrawImage(foreground, new Point((int)offset.X, (int)offset.Y), 1f));
+
+            images.Add(background);
             progressTask.Increment(1);
         }
 
@@ -118,13 +113,13 @@ public class AnimateCommandHandler : ILeafCommandHandler<AnimateCommand.AnimateA
 
 
 
-    private static Task DownscaleImages(List<Image> images, IResampler sampler, int length, ProgressTask progressTask)
+    private static Task DownscaleImages(List<Image> images, IResampler sampler, int sideLength, ProgressTask progressTask)
     {
         progressTask.MaxValue = images.Count;
         progressTask.StartTask();
         foreach (var image in images)
         {
-            image.Mutate(x => x.Resize(length, length, sampler, true));
+            image.Mutate(x => x.Resize(sideLength, sideLength, sampler, true));
 
             progressTask.Increment(1);
         }
@@ -150,13 +145,13 @@ public class AnimateCommandHandler : ILeafCommandHandler<AnimateCommand.AnimateA
         return Task.CompletedTask;
     }
 
-    private static Task<Image> RenderGif(IReadOnlyList<Image> images, int framesPerSecond, ProgressTask progressTask)
+    private static Task<Image> RenderGif(IReadOnlyList<Image> images, int frameDelay, ProgressTask progressTask)
     {
         progressTask.MaxValue = images.Count;
         progressTask.StartTask();
 
 
-        var frameDelay = (int)Math.Floor(1f / framesPerSecond * 100);
+        // var frameDelay = (int)Math.Floor(1f / framesPerSecond * 100);
 
 
         var gif = images[0];

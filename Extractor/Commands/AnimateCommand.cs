@@ -54,6 +54,10 @@ public class AnimateCommand : LeafCommand<AnimateCommand.AnimateArguments, Anima
                 duration
             );
 
+
+            if (framesPerSecond > 100)
+                return new FailedParseResult<AnimateArguments>("Frame rate cannot be greater than 100.");
+
             return new SuccessfulParseResult<AnimateArguments>(result);
         }
     }
