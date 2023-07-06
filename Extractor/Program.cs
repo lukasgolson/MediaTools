@@ -1,4 +1,5 @@
-﻿using Extractor.Commands;
+﻿using System.Text;
+using Extractor.Commands;
 using FFMediaToolkit;
 using Spectre.Console;
 using TreeBasedCli;
@@ -7,8 +8,14 @@ namespace Extractor
 {
     public static class Program
     {
+        private static FileStream? _fileStream;
+        private static StreamWriter? _streamWriter;
+        private static StreamReader? _streamReader;
+
         private static async Task<int> Main(string[] args)
         {
+            AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
+
             ValidateIo();
 
             try
@@ -25,10 +32,6 @@ namespace Extractor
             {
                 DisplayException(ex);
             }
-            finally
-            {
-                Cleanup();
-            }
 
             return 0;
         }
@@ -41,6 +44,7 @@ namespace Extractor
         private static async Task HandleArguments(string[] args)
         {
             var settings = CreateArgumentHandlerSettings();
+
             var argumentHandler = new ArgumentHandler(settings);
             await argumentHandler.HandleAsync(args);
         }
@@ -59,10 +63,16 @@ namespace Extractor
         {
             CleanupOldLogFiles();
 
-            if (AreStandardStreamsAvailable())
-                return;
+            var redirectConsole = !AreStandardStreamsAvailable();
 
-            RedirectConsoleToLogFile();
+#if redirectConsole
+            redirectConsole = true;
+#endif
+
+
+            if (redirectConsole)
+                RedirectConsoleToLogFile();
+
         }
 
         private static bool AreStandardStreamsAvailable()
@@ -76,11 +86,24 @@ namespace Extractor
         {
             var tempLogFile = CreateTempLogFile();
 
-            var fileStream = new FileStream(tempLogFile, FileMode.OpenOrCreate, FileAccess.Write);
-            var streamWriter = new StreamWriter(fileStream);
+            _fileStream = new FileStream(tempLogFile, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
+            _streamWriter = new StreamWriter(_fileStream, Encoding.ASCII);
 
-            Console.SetOut(streamWriter);
-            Console.SetError(streamWriter);
+            _streamWriter.AutoFlush = true;
+
+            _streamReader = StreamReader.Null;
+
+            Console.SetIn(_streamReader);
+            Console.SetOut(_streamWriter);
+            Console.SetError(_streamWriter);
+
+            AnsiConsole.Create(new AnsiConsoleSettings
+            {
+                Ansi = AnsiSupport.No,
+                ColorSystem = ColorSystemSupport.Legacy,
+                Out = new AnsiConsoleOutput(_streamWriter),
+                Interactive = InteractionSupport.No
+            });
         }
 
         private static string CreateTempLogFile()
@@ -150,10 +173,11 @@ namespace Extractor
                 .Build();
         }
 
-        private static void Cleanup()
+        private static void CurrentDomain_ProcessExit(object? sender, EventArgs e)
         {
-            AnsiConsole.Reset();
-            AnsiConsole.Cursor.Show(true);
+            _streamWriter?.Close();
+            _fileStream?.Close();
+            _streamReader?.Close();
         }
     }
 }
