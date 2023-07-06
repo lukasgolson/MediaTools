@@ -11,8 +11,8 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
     public async Task HandleAsync(ExtractAllCommand.ExtractAllArguments extractAllArguments, LeafCommand executedCommand)
     {
 
-        var stopwatch = new Stopwatch();
-        stopwatch.Start();
+        var stopwatch = Stopwatch.StartNew();
+
 
         var finalFrameCount = 0;
 
@@ -72,40 +72,28 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
     }
 
 
-    private Task ExtractFrames(ExtractAllCommand.ExtractAllArguments extractAllArguments, ProgressTask progress)
+    private async Task ExtractFrames(ExtractAllCommand.ExtractAllArguments extractAllArguments, ProgressTask progress)
     {
         var file = MediaFile.Open(extractAllArguments.InputFile);
+        var tasks = new List<Task>();
 
         ulong frameIndex = 0;
-        ulong completed = 0;
         foreach (var frame in file.GetFrames(extractAllArguments.DropRatio))
         {
             var imageName = $"{Path.GetFileNameWithoutExtension(extractAllArguments.InputFile)}_{frameIndex + 1}.{extractAllArguments.OutputFormat}";
             var output = Path.Join(extractAllArguments.OutputFolder, imageName);
 
-            async void SaveFrame()
+            tasks.Add(Task.Run(async () =>
             {
-                await frame.SaveAsync(output);
+                await frame.SaveAsync(output).ConfigureAwait(false);
                 progress.Increment(1);
-                completed++;
-            }
+            }));
 
-            _ = Task.Run(SaveFrame);
             frameIndex++;
         }
 
-        ulong lastFrameCount = 0;
-        // ReSharper disable once LoopVariableIsNeverChangedInsideLoop
-        while (frameIndex > completed)
-        {
-            var frameCount = frameIndex - completed;
-            if (frameCount != lastFrameCount)
-                progress.Description($"[red] waiting on {frameCount} frame(s) to save[/]");
+        await Task.WhenAll(tasks);
 
-            lastFrameCount = frameCount;
-        }
         progress.Description("[green]Extracting Frames[/]").Complete();
-
-        return Task.CompletedTask;
     }
 }
