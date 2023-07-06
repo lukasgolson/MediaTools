@@ -24,7 +24,7 @@ public static class MediaFileHelpers
         }
     }
 
-    public static IEnumerable<Image<Bgr24>> GetFrames(this MediaFile mediaFile, float dropRatio)
+    public static IEnumerable<Image> GetFrames(this MediaFile mediaFile, float dropRatio)
     {
         switch (dropRatio)
         {

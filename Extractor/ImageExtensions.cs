@@ -59,4 +59,36 @@ public static class ImageExtensions
 
         return src;
     }
+
+    public static void AdjustBrightnessAndContrast(this Image<Rgba32> src, float brightnessThresholdHigh = 0.7f, float brightnessThresholdLow = 0.3f, float contrastThreshold = 0.1f)
+    {
+        float totalBrightness = 0;
+        float totalVariance = 0;
+        float totalPixels = src.Width * src.Height;
+
+
+        // Calculate average brightness and total variance in a single loop
+        for (var y = 0; y < src.Height; y++)
+        for (var x = 0; x < src.Width; x++)
+        {
+            var pixel = src[x, y];
+            var brightness = pixel.R / 255.0f * 0.3f + pixel.G / 255.0f * 0.59f + pixel.B / 255.0f * 0.11f; // Using NTSC weighting for brightness
+            totalBrightness += brightness;
+            totalVariance += brightness * brightness;
+        }
+
+        var avgBrightness = totalBrightness / totalPixels;
+        // Calculate standard deviation
+        var stdDev = (float)Math.Sqrt(totalVariance / totalPixels - avgBrightness * avgBrightness);
+
+        // If brightness is high (for instance, above brightnessThresholdHigh) reduce it, otherwise if it's low (for instance, below brightnessThresholdLow) increase it
+        var targetBrightness = avgBrightness > brightnessThresholdHigh ? -0.1f : avgBrightness < brightnessThresholdLow ? 0.1f : 0;
+        // If contrast is low (for instance, below contrastThreshold) increase it
+        var targetContrast = stdDev < contrastThreshold ? 0.2f : 0;
+
+        // Adjust brightness and contrast
+        src.Mutate(x => x
+            .Brightness(targetBrightness)
+            .Contrast(targetContrast));
+    }
 }

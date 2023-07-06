@@ -5,9 +5,9 @@ namespace Extractor.Extensions;
 
 public static class BitmapExtensions
 {
-    public static Image<Bgr24> ToBitmap(this ImageData imageData)
+    public static Image ToBitmap(this ImageData imageData)
     {
-        return Image.LoadPixelData<Bgr24>(imageData.Data, imageData.ImageSize.Width, imageData.ImageSize.Height);
+        return Image.LoadPixelData<Bgra32>(imageData.Data, imageData.ImageSize.Width, imageData.ImageSize.Height);
     }
 
     public static Image<Bgr, byte> ToEmguBitmap(this ImageData imageData)

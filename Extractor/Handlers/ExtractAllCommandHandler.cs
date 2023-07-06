@@ -83,6 +83,8 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
             var imageName = $"{Path.GetFileNameWithoutExtension(extractAllArguments.InputFile)}_{frameIndex + 1}.{extractAllArguments.OutputFormat}";
             var output = Path.Join(extractAllArguments.OutputFolder, imageName);
 
+
+
             tasks.Add(Task.Run(async () =>
             {
                 await frame.SaveAsync(output).ConfigureAwait(false);
