@@ -65,14 +65,8 @@ namespace Extractor
 
             var redirectConsole = !AreStandardStreamsAvailable();
 
-#if redirectConsole
-            redirectConsole = true;
-#endif
-
-
             if (redirectConsole)
                 RedirectConsoleToLogFile();
-
         }
 
         private static bool AreStandardStreamsAvailable()
