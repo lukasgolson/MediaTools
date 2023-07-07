@@ -1,0 +1,82 @@
+name: .NET 7 Continuous Integration and Deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        rid: [win-x64, linux-x64, osx-x64]
+    runs-on: ubuntu-latest
+    name: .NET 7 Build Application
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install .net Core
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: "7.0.x"
+
+      - name: Retrieve NUGET cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Build application
+        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/publish --runtime ${{ matrix.rid }} /p:PublishReadyToRun=true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:UseAppHost=true --self-contained true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.rid }}
+          path: ${{env.DOTNET_ROOT}}/publish/*
+          if-no-files-found: warn
+
+  upload:
+    needs: build
+    runs-on: ubuntu-latest
+    name: upload
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Display structure of downloaded files
+        run: ls -R
+
+      - name: Zip Linux-X64
+        uses: montudor/action-zip@v1
+        with:
+          args: zip -qq -r linux-x64.zip linux-x64/*
+
+      - name: Zip OSX-X64
+        uses: montudor/action-zip@v1
+        with:
+          args: zip -qq -r osx-x64.zip osx-x64/*
+
+      - name: Zip Win-X64
+        uses: montudor/action-zip@v1
+        with:
+          args: zip -qq -r win-x64.zip win-x64/*
+
+      - name: Display updated structure of archived files
+        run: ls -R
+
+      - name: Upload Release
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            linux-x64.zip
+            osx-x64.zip
+            win-x64.zip
