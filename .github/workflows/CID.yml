@@ -30,8 +30,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Run tests
+        run: dotnet test --logger trx
+
       - name: Build application
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/publish --runtime ${{ matrix.rid }} /p:PublishReadyToRun=true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:UseAppHost=true --self-contained true
+        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/publish --runtime ${{ matrix.rid }} /p:PublishReadyToRun=true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=false /p:UseAppHost=true --self-contained true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
@@ -47,6 +50,21 @@ jobs:
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v3
+        with:
+          name: win-x64
+          path: win-x64
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: linux-x64
+          path: linux-x64
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: osx-x64
+          path: osx-x64
 
       - name: Display structure of downloaded files
         run: ls -R
