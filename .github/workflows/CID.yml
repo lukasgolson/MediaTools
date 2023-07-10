@@ -3,7 +3,7 @@ name: .NET 7 Continuous Integration and Deployment
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 jobs:
