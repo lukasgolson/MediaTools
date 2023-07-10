@@ -1,9 +1,13 @@
-﻿using System.Text;
+﻿using System.Reflection;
+using System.Text;
 using Extractor.Commands;
+using Extractor.Patches;
 using FFMediaToolkit;
 using Spectre.Console;
 using TreeBasedCli;
 using TreeBasedCli.Exceptions;
+using HarmonyLib;
+
 namespace Extractor
 {
     public static class Program
@@ -11,6 +15,8 @@ namespace Extractor
         private static FileStream? _fileStream;
         private static StreamWriter? _streamWriter;
         private static StreamReader? _streamReader;
+
+        private static readonly Harmony Harmony = new("ca.ubc.forestry.irsslab.mediatools");
 
         private static async Task<int> Main(string[] args)
         {
@@ -63,10 +69,15 @@ namespace Extractor
         {
             CleanupOldLogFiles();
 
-            var redirectConsole = !AreStandardStreamsAvailable();
-
-            if (redirectConsole)
+            if (!AreStandardStreamsAvailable())
+            {
                 RedirectConsoleToLogFile();
+            }
+
+            if (!IsConsoleHandleAvailable())
+            {
+                Harmony.PatchCategory(PatchCategories.ConsoleHandlePatches);
+            }
         }
 
         private static bool AreStandardStreamsAvailable()
@@ -74,6 +85,20 @@ namespace Extractor
             return Console.OpenStandardInput(1) != Stream.Null &&
                 Console.OpenStandardOutput(1) != Stream.Null &&
                 Console.OpenStandardError(1) != Stream.Null;
+        }
+
+        private static bool IsConsoleHandleAvailable()
+        {
+            try
+            {
+                _ = Console.WindowWidth;
+            }
+            catch (IOException e)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private static void RedirectConsoleToLogFile()
