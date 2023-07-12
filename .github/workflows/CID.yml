@@ -36,10 +36,11 @@ jobs:
       - name: Build application
         run: dotnet publish -c Release -o ./publish --runtime ${{ matrix.rid }} /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=false /p:UseAppHost=true /p:PublishTrimmed=false --no-self-contained
 
-      - name: Zip Artifacts
-        uses: montudor/action-zip@v1
-        with:
-          args: zip -qq -r  ${{ matrix.rid }}.zip . -i publish/*
+      - name: Change directory and Zip Artifacts
+        run: |
+           cd publish
+           zip -r ../${{ matrix.rid }}.zip .
+           cd ..
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
