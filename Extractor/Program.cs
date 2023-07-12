@@ -1,13 +1,12 @@
-﻿using System.Reflection;
-using System.Text;
+﻿using System.Text;
 using Extractor.Commands;
+using Extractor.Extensions;
 using Extractor.Patches;
 using FFMediaToolkit;
+using HarmonyLib;
 using Spectre.Console;
 using TreeBasedCli;
 using TreeBasedCli.Exceptions;
-using HarmonyLib;
-
 namespace Extractor
 {
     public static class Program
@@ -32,11 +31,12 @@ namespace Extractor
             catch (MessageOnlyException ex)
             {
                 DisplayErrorMessage(ex.Message);
-                return -1;
+                return ex.ExitCode();
             }
             catch (Exception ex)
             {
                 DisplayException(ex);
+                return ex.ExitCode();
             }
 
             return 0;
