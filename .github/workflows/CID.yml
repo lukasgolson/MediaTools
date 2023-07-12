@@ -8,10 +8,10 @@ on:
 
 jobs:
   build:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         rid: ['win-x64', 'linux-x64', 'osx-x64']
-    runs-on: ubuntu-latest
     name: .NET 7 Build Application
     steps:
       - name: Checkout repository
@@ -33,7 +33,7 @@ jobs:
       - name: Run tests
         run: dotnet test --logger trx
 
-       - name: Build application
+      - name: Build application
         run: dotnet publish -c Release -o ./publish --runtime ${{ matrix.rid }} /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=false /p:UseAppHost=true /p:PublishTrimmed=false --no-self-contained
 
       - name: Zip Artifacts
@@ -46,7 +46,6 @@ jobs:
         with:
           name: ${{ matrix.rid }}.zip
           path: ${{ matrix.rid }}.zip
-
 
   upload_release:
     needs: build
