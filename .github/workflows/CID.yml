@@ -34,7 +34,7 @@ jobs:
         run: dotnet test --logger trx
 
       - name: Build application
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/publish --runtime ${{ matrix.rid }} /p:PublishReadyToRun=true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=false /p:UseAppHost=true /p:PublishTrimmed=false --self-contained true
+        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/publish --runtime ${{ matrix.rid }} /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=false /p:UseAppHost=true /p:PublishTrimmed=false --self-contained true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
