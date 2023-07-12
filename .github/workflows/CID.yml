@@ -33,19 +33,20 @@ jobs:
       - name: Run tests
         run: dotnet test --logger trx
 
-      - name: Build application
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/publish --runtime ${{ matrix.rid }} /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=false /p:UseAppHost=true /p:PublishTrimmed=false --self-contained true
+       - name: Build application
+        run: dotnet publish -c Release -o ./publish --runtime ${{ matrix.rid }} /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=false /p:UseAppHost=true /p:PublishTrimmed=false --no-self-contained
 
       - name: Zip Artifacts
         uses: montudor/action-zip@v1
         with:
-          args: zip -qq -r ${{ matrix.rid }}.zip . -i ${{env.DOTNET_ROOT}}/publish/*
+          args: zip -qq -r ${{ matrix.rid }}.zip ./publish/*
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.rid }}.zip
           path: ${{ matrix.rid }}.zip
+
 
   upload_release:
     needs: build

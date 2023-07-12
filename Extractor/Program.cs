@@ -93,7 +93,7 @@ namespace Extractor
             {
                 _ = Console.WindowWidth;
             }
-            catch (IOException e)
+            catch (IOException)
             {
                 return false;
             }
