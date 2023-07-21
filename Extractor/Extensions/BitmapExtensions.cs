@@ -10,15 +10,15 @@ public static class BitmapExtensions
         return Image.LoadPixelData<Bgr24>(imageData.Data, imageData.ImageSize.Width, imageData.ImageSize.Height);
     }
 
+    public static Image<Bgr24> ToBitmap(this Image<Bgr, byte> imageData)
+    {
+        return Image.LoadPixelData<Bgr24>(imageData.Bytes, imageData.Width, imageData.Height);
+    }
+
     public static Image<Bgr, byte> ToEmguBitmap(this ImageData imageData)
     {
         var emguBitmap = new Image<Bgr, byte>(imageData.ImageSize.Width, imageData.ImageSize.Height);
         emguBitmap.Bytes = imageData.Data.ToArray();
         return emguBitmap;
-    }
-
-    public static Image<Bgr24> ToBitmap(this Image<Bgr, byte> imageData)
-    {
-        return Image.LoadPixelData<Bgr24>(imageData.Bytes, imageData.Width, imageData.Height);
     }
 }

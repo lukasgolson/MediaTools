@@ -1,7 +1,11 @@
 ﻿using System.Numerics;
+using Emgu.CV;
+using Emgu.CV.Structure;
+using Emgu.CV.XImgproc;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NumSharp;
+
 
 namespace SkyRemoval
 {
@@ -18,7 +22,7 @@ namespace SkyRemoval
             return _modelPath != null;
         }
 
-        public async Task<Image<Rgba32>> Run(Image<Rgba32> image)
+        public async Task<Image<Rgb24>> Run(Image<Rgb24> image)
         {
             if (_modelPath == null)
             {
@@ -28,22 +32,69 @@ namespace SkyRemoval
             var originalWidth = image.Width;
             var originalHeight = image.Height;
 
-            image.Mutate(x =>
+            var processingImage = image.Clone(x =>
             {
                 x.ProcessPixelRowsAsVector4(NormalizePixelRow);
-                x.Resize(ModelWidth, ModelHeight);
+                x.Resize(new ResizeOptions
+                {
+                    Size = new Size(ModelWidth, ModelHeight),
+                    Mode = ResizeMode.Stretch,
+                    Sampler = KnownResamplers.Box
+                });
+
             });
 
-            var npImg = ImageToNdArray(image);
+            var npImg = TransposeExpandNdArray(ImageToNdArray(processingImage));
 
-            npImg = TransposeExpandNdArray(npImg);
             var output = RunOnnxSession(npImg);
 
-            return NdArrayToImage(output);
+            output.Mutate(x =>
+            {
+                x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
 
-            //    var finalOutput = ProcessOutput(output, originalWidth, originalHeight);
+                x.Resize(new ResizeOptions
+                {
+                    Size = new Size(originalWidth, originalHeight),
+                    Mode = ResizeMode.Stretch,
+                    Sampler = KnownResamplers.Lanczos3
+                });
 
-            //  return finalOutput;
+
+            });
+
+
+
+            var inputSrc = image.ConvertToEmguCv().Mat;
+            var outputSrc = output.ConvertToEmguCv().Mat;
+
+            // Create an empty Mat for the destination image
+            var dst = new Mat();
+
+
+            XImgprocInvoke.GuidedFilter(outputSrc, inputSrc, dst, 20, 0.01f);
+
+            output = dst.ToImage<Bgr, Byte>().ConvertToImageSharp();
+
+
+            output.Mutate(x =>
+            {
+                x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
+                x.Grayscale();
+                x.BinaryThreshold(0.5f);
+            });
+
+            return output;
+        }
+        private static void Clip(Span<Vector4> pixelRow, float min = 0, float max = 1)
+        {
+
+            foreach (ref var pixel in pixelRow)
+            {
+                pixel.X = Math.Clamp(pixel.X, min, max);
+                pixel.Y = Math.Clamp(pixel.Y, min, max);
+                pixel.Z = Math.Clamp(pixel.Z, min, max);
+                pixel.W = Math.Clamp(pixel.W, min, max);
+            }
         }
 
         private static void NormalizePixelRow(Span<Vector4> pixelRow)
@@ -66,105 +117,91 @@ namespace SkyRemoval
                 1
             });
 
-            //return npImg;
+
             return npImg.reshape(1, npImg.shape[0], npImg.shape[1], npImg.shape[2]);
         }
 
-        private NDArray RunOnnxSession(NDArray npImg)
+        private Image<Rgb24> RunOnnxSession(NDArray npImg)
         {
             var session = new InferenceSession(_modelPath);
-
-            var data = npImg.Data<float>().ToArray();
-            var tensor = new DenseTensor<float>(data, npImg.shape);
-
+            var tensor = NdArrayToDenseTensor(npImg);
             var inputName = session.InputNames[0];
 
-            var input = NamedOnnxValue.CreateFromTensor(inputName, tensor);
             var onnxOutput = session.Run(new[]
             {
-                input
+                NamedOnnxValue.CreateFromTensor(inputName, tensor)
             });
+
             var outputTensor = onnxOutput.First().AsTensor<float>();
-            var flatArray = outputTensor.ToArray();
-            var shape = tensor.Dimensions.ToArray();
-            return new NDArray(flatArray, shape);
-        }
+            var batchSize = outputTensor.Dimensions[0];
+            var channels = outputTensor.Dimensions[1];
+            var height = outputTensor.Dimensions[2];
+            var width = outputTensor.Dimensions[3];
 
-        private static Image<Rgba32> ProcessOutput(NDArray output, int originalWidth, int originalHeight)
-        {
-            output = output[0, 0].transpose(new[]
-            {
-                1,
-                2,
-                0
-            });
-            var img = ResizeImage(output, originalWidth, originalHeight);
-            output = ImageToNdArray(img);
-            output = np.array(new[]
-            {
-                output,
-                output,
-                output
-            }).transpose(new[]
-            {
-                1,
-                2,
-                0
-            });
-            output = np.clip(output, 0.0f, 1.0f);
-            return NdArrayToImage(output);
-        }
+            var img = new Image<Rgb24>(Configuration.Default, width, height);
 
-        private static Image<Rgba32> ResizeImage(NDArray output, int originalWidth, int originalHeight)
-        {
-            using var img = NdArrayToImage(output);
-            img.Mutate(x => x.Resize(new ResizeOptions
+            for (var y = 0; y < height; y++)
             {
-                Size = new Size(originalWidth, originalHeight),
-                Sampler = KnownResamplers.Lanczos3
-            }));
+                for (var x = 0; x < width; x++)
+                {
+                    var pixelValue = (byte)(outputTensor[0, 0, y, x] * 255); // Using outputTensor instead of ndArray
+                    img[x, y] = new Rgb24(pixelValue, pixelValue, pixelValue);
+                }
+            }
 
             return img;
         }
 
-        private static NDArray ImageToNdArray(Image<Rgba32> image)
+
+        private static DenseTensor<float> NdArrayToDenseTensor(NDArray npImg)
+        {
+            var data = npImg.Data<float>().ToArray();
+            var tensor = new DenseTensor<float>(data, npImg.shape);
+            return tensor;
+        }
+
+
+
+        private static NDArray ImageToNdArray(Image<Rgb24> image)
         {
             var height = image.Height;
             var width = image.Width;
-            var channels = image.PixelType.BitsPerPixel / 8;
-            var npImg = new NDArray(typeof(float), new Shape(height, width, channels));
+            var npImg = new NDArray(typeof(float), new Shape(height, width, 3));
 
             for (var i = 0; i < height; i++)
             {
                 for (var j = 0; j < width; j++)
                 {
-                    var pixel = image[i, j];
+                    var pixel = image[j, i]; // Access image pixels in (width, height) order
                     npImg[i, j, 0] = pixel.R / 255f;
                     npImg[i, j, 1] = pixel.G / 255f;
                     npImg[i, j, 2] = pixel.B / 255f;
-                    npImg[i, j, 3] = pixel.A / 255f;
                 }
             }
 
             return npImg;
         }
 
-        private static Image<Rgba32> NdArrayToImage(NDArray ndArray)
+
+        private static Image<Rgb24> NdArrayToImage(NDArray ndArray)
         {
+            if (ndArray.ndim != 3 || ndArray.shape[2] < 3)
+            {
+                throw new ArgumentException("Invalid NDArray shape. Expecting a 3D array with at least 3 channels in the third dimension.");
+            }
+
             var height = ndArray.shape[0];
             var width = ndArray.shape[1];
-            var img = new Image<Rgba32>(Configuration.Default, width, height);
+            var img = new Image<Rgb24>(Configuration.Default, width, height);
 
             for (var y = 0; y < height; y++)
             {
                 for (var x = 0; x < width; x++)
                 {
-                    img[x, y] = new Rgba32(
+                    img[x, y] = new Rgb24(
                         (byte)(ndArray[y, x, 0] * 255),
                         (byte)(ndArray[y, x, 1] * 255),
-                        (byte)(ndArray[y, x, 2] * 255),
-                        (byte)(ndArray[y, x, 3] * 255)
-                    );
+                        (byte)(ndArray[y, x, 2] * 255));
                 }
             }
 

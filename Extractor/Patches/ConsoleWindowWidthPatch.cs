@@ -2,10 +2,10 @@
 namespace Extractor.Patches;
 
 /// <summary>
-/// Patch for the Console class to simulate window width.
-/// This patch is necessary when invoking Media Tools from python,
-/// as the console doesn't get initialized in that scenario.
-/// This way, we can effectively use TreeBasedCli.
+///     Patch for the Console class to simulate window width.
+///     This patch is necessary when invoking Media Tools from python,
+///     as the console doesn't get initialized in that scenario.
+///     This way, we can effectively use TreeBasedCli.
 /// </summary>
 [HarmonyPatch(typeof(Console))]
 [HarmonyPatchCategory(PatchCategories.ConsoleHandlePatches)]

@@ -8,5 +8,12 @@ var model = new Model();
 
 await model.Setup();
 
-var output = await model.Run(Image.Load<Rgba32>("input.png"));
-output.Save("output.jpg");
+var path = "input.png";
+
+var extension = Path.GetExtension(path);
+var fileName = Path.GetFileNameWithoutExtension(path);
+
+var maskPath = $"{fileName}_mask{extension}";
+
+var output = await model.Run(Image.Load<Rgb24>(path));
+output.Save(maskPath);

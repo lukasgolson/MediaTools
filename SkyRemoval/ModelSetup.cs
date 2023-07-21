@@ -3,6 +3,7 @@ namespace SkyRemoval;
 
 public static class ModelSetup
 {
+    private static string? _getOnnxModelName;
     private const string url = "https://github.com/OpenDroneMap/SkyRemoval/releases/download/v1.0.6/model.zip";
     private static async Task<bool> DownloadAndExtractModel(Uri modelUri, string modelFolder)
     {
@@ -35,6 +36,11 @@ public static class ModelSetup
         if (!Directory.Exists(modelFolder))
             Directory.CreateDirectory(modelFolder);
 
+        _getOnnxModelName = GetOnnxModelName(modelFolder);
+        if (_getOnnxModelName != null)
+            return _getOnnxModelName;
+
+
 
         foreach (var file in Directory.EnumerateFiles(modelFolder))
         {
@@ -49,7 +55,12 @@ public static class ModelSetup
         }
 
         // Look for the ONNX file
-        return Directory.GetFiles(modelFolder, "*.onnx").FirstOrDefault();
+        return GetOnnxModelName(modelFolder);
 
+    }
+    private static string? GetOnnxModelName(string modelFolder)
+    {
+
+        return Directory.GetFiles(modelFolder, "*.onnx").FirstOrDefault();
     }
 }
