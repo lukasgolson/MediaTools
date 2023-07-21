@@ -9,17 +9,52 @@ using NumSharp;
 
 namespace SkyRemoval
 {
-    public class Model
+    public class SkyRemovalModel
     {
         private const int ModelWidth = 384;
         private const int ModelHeight = 384;
 
-        private string? _modelPath;
+        private static string? _modelPath;
 
-        public async Task<bool> Setup()
+        private readonly InferenceSession _session;
+
+        // Make the constructor private to prevent direct construction calls.
+        private SkyRemovalModel(string modelPath)
         {
-            _modelPath = await ModelSetup.SetupModel();
-            return _modelPath != null;
+            _session = new InferenceSession(modelPath);
+        }
+
+        // Double-Checked Locking for thread safety in multi-threading scenarios.
+        private static SkyRemovalModel? _instance;
+        private static readonly object LockObject = new object();
+
+        public static async Task<SkyRemovalModel> Create()
+        {
+            if (_instance != null)
+                return _instance;
+
+
+
+
+            lock (LockObject)
+            {
+                if (_instance != null)
+                {
+                    return _instance;
+                }
+
+                if (string.IsNullOrEmpty(_modelPath))
+                    _modelPath = ModelSetup.SetupModel().Result;
+
+                if (string.IsNullOrEmpty(_modelPath))
+                {
+                    throw new Exception("Model not setup");
+                }
+
+                _instance = new SkyRemovalModel(_modelPath);
+            }
+
+            return _instance;
         }
 
         public async Task<Image<Rgb24>> Run(Image<Rgb24> image)
@@ -67,7 +102,6 @@ namespace SkyRemoval
             var inputSrc = image.ConvertToEmguCv().Mat;
             var outputSrc = output.ConvertToEmguCv().Mat;
 
-            // Create an empty Mat for the destination image
             var dst = new Mat();
 
 
@@ -123,11 +157,10 @@ namespace SkyRemoval
 
         private Image<Rgb24> RunOnnxSession(NDArray npImg)
         {
-            var session = new InferenceSession(_modelPath);
             var tensor = NdArrayToDenseTensor(npImg);
-            var inputName = session.InputNames[0];
+            var inputName = _session.InputNames[0];
 
-            var onnxOutput = session.Run(new[]
+            var onnxOutput = _session.Run(new[]
             {
                 NamedOnnxValue.CreateFromTensor(inputName, tensor)
             });
