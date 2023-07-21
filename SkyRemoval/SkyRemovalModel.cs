@@ -24,19 +24,17 @@ namespace SkyRemoval
             _session = new InferenceSession(modelPath);
         }
 
-        // Double-Checked Locking for thread safety in multi-threading scenarios.
         private static SkyRemovalModel? _instance;
-        private static readonly object LockObject = new object();
+        private static readonly SemaphoreSlim Semaphore = new(1, 1);
 
-        public static async Task<SkyRemovalModel> Create()
+        public static async Task<SkyRemovalModel> CreateAsync()
         {
             if (_instance != null)
                 return _instance;
 
+            await Semaphore.WaitAsync();
 
-
-
-            lock (LockObject)
+            try
             {
                 if (_instance != null)
                 {
@@ -44,7 +42,7 @@ namespace SkyRemoval
                 }
 
                 if (string.IsNullOrEmpty(_modelPath))
-                    _modelPath = ModelSetup.SetupModel().Result;
+                    _modelPath = await ModelSetup.SetupModel();
 
                 if (string.IsNullOrEmpty(_modelPath))
                 {
@@ -52,6 +50,10 @@ namespace SkyRemoval
                 }
 
                 _instance = new SkyRemovalModel(_modelPath);
+            }
+            finally
+            {
+                Semaphore.Release();
             }
 
             return _instance;
