@@ -5,13 +5,16 @@ public static class CommandOptions
 {
     public const string InputLabel = "--input";
     public const string OutputLabel = "--output";
-    public const string InputFormatLabel = "--informat";
+    public const string MaskOutputLabel = "--mask-output";
+    public const string InputFormatLabel = "--in-format";
     public const string OutputFormatLabel = "--format";
     public const string OutputFrameDropRatioLabel = "--drop";
     public const string FrameRateLabel = "--fps";
     public const string DurationLabel = "--duration";
 
     public const string LengthLabel = "--length";
+    
+    public const string MaskLabel = "--mask";
 
 
     public static readonly CommandOption InputOption = new(InputLabel, new[]
@@ -22,6 +25,11 @@ public static class CommandOptions
     public static readonly CommandOption OutputOption = new(OutputLabel, new[]
     {
         "The output path. Default: Name of the input file with the relevant extension."
+    });
+    
+    public static readonly CommandOption MaskOutputOption = new (MaskOutputLabel, new[]
+    {
+        "The output path for the mask. Default: Name of the input file with the relevant extension."
     });
 
     public static readonly CommandOption InputFormatOption = new(InputFormatLabel, new[]
@@ -47,5 +55,10 @@ public static class CommandOptions
     public static readonly CommandOption OutputLength = new(LengthLabel, new[]
     {
         "The output length for square resolutions. Defaults to 128."
+    });
+    
+    public static readonly CommandOption Mask = new(MaskLabel, new[]
+    {
+        "The mask to apply to the output. Default: none. Example: --mask sky"
     });
 }

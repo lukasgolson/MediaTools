@@ -11,4 +11,10 @@ public static class ProgressTaskExtensions
         task.StopTask();
         return task;
     }
+    
+    public static ProgressTask IncrementMaxValue(this ProgressTask task, int increment = 1)
+    {
+        task.MaxValue(task.MaxValue + increment);
+        return task;
+    }
 }
