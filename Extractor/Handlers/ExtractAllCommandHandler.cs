@@ -30,6 +30,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
                 var setupDependenciesProgressTask = ctx.AddTask("[green]Setting up Dependencies[/]", true, 2);
                 var infoProgressTask = ctx.AddTask("[green]Analysing Media File[/]", true, 2);
                 var framesProgressTask = ctx.AddTask("[green]Extracting Frames[/]");
+                var maskProgressTask = ctx.AddTask("[green]Generating Masks[/]");
 
                 await CheckArguments(extractAllArguments, checkArgumentsProgressTask);
 
@@ -40,10 +41,11 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
                 finalFrameCount = GetFrameCount(extractAllArguments, infoProgressTask);
 
                 framesProgressTask.MaxValue(finalFrameCount == 0 ? 1 : finalFrameCount);
+                maskProgressTask.MaxValue(finalFrameCount == 0 ? 1 : finalFrameCount);
 
                 AnsiConsole.MarkupLineInterpolated($"Extracting {finalFrameCount} frames from {extractAllArguments.InputFile} to {extractAllArguments.FramesOutputFolder}.");
 
-                await ExtractFrames(extractAllArguments, framesProgressTask);
+                await ExtractFrames(extractAllArguments, framesProgressTask, maskProgressTask);
             });
 
         stopwatch.Stop();
@@ -105,10 +107,8 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
     }
 
 
-    private async Task ExtractFrames(ExtractAllCommand.ExtractAllArguments extractAllArguments, ProgressTask progress)
+    private async Task ExtractFrames(ExtractAllCommand.ExtractAllArguments extractAllArguments, ProgressTask progress, ProgressTask? maskProgress)
     {
-        GC.Collect(2, GCCollectionMode.Aggressive);
-
         var file = MediaFile.Open(extractAllArguments.InputFile);
         var tasks = new List<Task>();
 
@@ -117,24 +117,28 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
         ulong frameIndex = 0;
         foreach (var frame in file.GetFrames(extractAllArguments.DropRatio))
         {
-            var index = frameIndex;
+            var imageName = $"{Path.GetFileNameWithoutExtension(extractAllArguments.InputFile)}_{frameIndex + 1}";
+
             tasks.Add(Task.Run(async () =>
             {
-                var imageName = $"{Path.GetFileNameWithoutExtension(extractAllArguments.InputFile)}_{index + 1}";
                 var frameOutput = Path.Join(extractAllArguments.FramesOutputFolder, $"{imageName}.{extractAllArguments.OutputFormat}");
 
                 await frame.SaveAsync(frameOutput).ConfigureAwait(false);
 
+                progress.Increment(1);
+            }));
+
+            tasks.Add(Task.Run(async () =>
+            {
                 if (skyMask && skyRemovalModel != null)
                 {
                     var maskOutput = Path.Join(extractAllArguments.MasksOutputFolder, $"{imageName}_mask.{extractAllArguments.OutputFormat}");
 
                     var mask = await skyRemovalModel.Run(frame.CloneAs<Rgb24>());
                     await mask.SaveAsync(maskOutput).ConfigureAwait(false);
+
+                    maskProgress?.Increment(1);
                 }
-
-
-                progress.Increment(1);
             }));
 
             frameIndex++;

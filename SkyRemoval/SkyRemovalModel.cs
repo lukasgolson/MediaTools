@@ -25,14 +25,16 @@ namespace SkyRemoval
         }
 
         private static SkyRemovalModel? _instance;
-        private static readonly SemaphoreSlim Semaphore = new(1, 1);
+        private static readonly SemaphoreSlim SetupSemaphore = new(1, 1);
+        private static readonly SemaphoreSlim ModelSemaphore = new(1, 1);
+
 
         public static async Task<SkyRemovalModel> CreateAsync()
         {
             if (_instance != null)
                 return _instance;
 
-            await Semaphore.WaitAsync();
+            await SetupSemaphore.WaitAsync();
 
             try
             {
@@ -53,73 +55,83 @@ namespace SkyRemoval
             }
             finally
             {
-                Semaphore.Release();
+                SetupSemaphore.Release();
             }
 
             return _instance;
         }
 
-        public async Task<Image<Rgb24>> Run(Image<Rgb24> image)
+        public async Task<Image<Rgb24>> Run(Image image)
         {
-            if (_modelPath == null)
+            await ModelSemaphore.WaitAsync();
+
+            try
             {
-                throw new Exception("Model not setup");
+                if (_modelPath == null)
+                {
+                    throw new Exception("Model not setup");
+                }
+
+                var originalWidth = image.Width;
+                var originalHeight = image.Height;
+
+                var processingImage = image.CloneAs<Rgb24>();
+
+                processingImage.Mutate(x =>
+                {
+                    x.ProcessPixelRowsAsVector4(NormalizePixelRow);
+                    x.Resize(new ResizeOptions
+                    {
+                        Size = new Size(ModelWidth, ModelHeight),
+                        Mode = ResizeMode.Stretch,
+                        Sampler = KnownResamplers.Box
+                    });
+
+                });
+
+                var npImg = TransposeExpandNdArray(ImageToNdArray(processingImage));
+
+                var output = RunOnnxSession(npImg);
+
+                output.Mutate(x =>
+                {
+                    x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
+
+                    x.Resize(new ResizeOptions
+                    {
+                        Size = new Size(originalWidth, originalHeight),
+                        Mode = ResizeMode.Stretch,
+                        Sampler = KnownResamplers.Lanczos3
+                    });
+                });
+
+
+
+                var inputSrc = image.CloneAs<Rgb24>().ConvertToEmguCv().Mat;
+                var outputSrc = output.ConvertToEmguCv().Mat;
+
+                var dst = new Mat();
+
+
+                XImgprocInvoke.GuidedFilter(outputSrc, inputSrc, dst, 20, 0.01f);
+
+                output = dst.ToImage<Bgr, Byte>().ConvertToImageSharp();
+
+
+                output.Mutate(x =>
+                {
+                    x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
+                    x.Grayscale();
+                    x.BinaryThreshold(0.5f);
+                });
+
+                return output;
+
             }
-
-            var originalWidth = image.Width;
-            var originalHeight = image.Height;
-
-            var processingImage = image.Clone(x =>
+            finally
             {
-                x.ProcessPixelRowsAsVector4(NormalizePixelRow);
-                x.Resize(new ResizeOptions
-                {
-                    Size = new Size(ModelWidth, ModelHeight),
-                    Mode = ResizeMode.Stretch,
-                    Sampler = KnownResamplers.Box
-                });
-
-            });
-
-            var npImg = TransposeExpandNdArray(ImageToNdArray(processingImage));
-
-            var output = RunOnnxSession(npImg);
-
-            output.Mutate(x =>
-            {
-                x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
-
-                x.Resize(new ResizeOptions
-                {
-                    Size = new Size(originalWidth, originalHeight),
-                    Mode = ResizeMode.Stretch,
-                    Sampler = KnownResamplers.Lanczos3
-                });
-
-
-            });
-
-
-
-            var inputSrc = image.ConvertToEmguCv().Mat;
-            var outputSrc = output.ConvertToEmguCv().Mat;
-
-            var dst = new Mat();
-
-
-            XImgprocInvoke.GuidedFilter(outputSrc, inputSrc, dst, 20, 0.01f);
-
-            output = dst.ToImage<Bgr, Byte>().ConvertToImageSharp();
-
-
-            output.Mutate(x =>
-            {
-                x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
-                x.Grayscale();
-                x.BinaryThreshold(0.5f);
-            });
-
-            return output;
+                ModelSemaphore.Release();
+            }
         }
         private static void Clip(Span<Vector4> pixelRow, float min = 0, float max = 1)
         {
