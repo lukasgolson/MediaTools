@@ -13,12 +13,14 @@ public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskS
         },
         new[]
         {
-            CommandOptions.InputOption, CommandOptions.OutputOption
+            CommandOptions.InputOption,
+            CommandOptions.OutputOption,
+            CommandOptions.EngineOption
         })
     {
     }
 
-    public record MaskSkyArguments(string InputPath, string OutputPath, PathType InputType) : IParsedCommandArguments;
+    public record MaskSkyArguments(string InputPath, string OutputPath, PathType InputType, SkyRemoval.ExecutionEngine Engine) : IParsedCommandArguments;
 
 
 
@@ -28,7 +30,16 @@ public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskS
         {
             var inputPath = arguments.GetArgument(CommandOptions.InputLabel).ExpectedAsSingleValue();
             var outputFolder = arguments.GetArgumentOrNull(CommandOptions.OutputLabel)?.ExpectedAsSingleValue() ?? Path.GetFileNameWithoutExtension(inputPath) + "_mask";
+            var engine = arguments.GetArgumentOrNull(CommandOptions.EngineLabel)?.ExpectedAsSingleValue() ?? "auto";
 
+            var executionEngine = engine.ToLowerInvariant() switch
+            {
+                "cpu" => SkyRemoval.ExecutionEngine.CPU,
+                "cuda" => SkyRemoval.ExecutionEngine.CUDA,
+                "tensor-rt" => SkyRemoval.ExecutionEngine.TensorRT,
+                "directml" => SkyRemoval.ExecutionEngine.DirectML,
+                _ => throw new MessageOnlyException("Invalid engine selected. Valid options are: cpu, cuda, tensor-rt, directml")
+            };
 
             var inputDirectory = PathType.None;
 
@@ -51,7 +62,8 @@ public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskS
             var result = new MaskSkyArguments(
                 inputPath,
                 outputFolder,
-                inputDirectory
+                inputDirectory,
+                executionEngine
             );
 
 

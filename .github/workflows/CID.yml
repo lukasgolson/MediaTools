@@ -34,7 +34,7 @@ jobs:
         run: dotnet test --logger trx
 
       - name: Build application
-        run: dotnet publish Extractor/Extractor.csproj -c Release -o ./publish --runtime ${{ matrix.rid }} /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=false /p:UseAppHost=true /p:PublishTrimmed=false --no-self-contained
+        run: dotnet publish Extractor/Extractor.csproj -c Release -o ./publish --runtime ${{ matrix.rid }} /p:IncludeNativeLibrariesForSelfExtract=false /p:UseAppHost=true /p:PublishTrimmed=false --no-self-contained
 
       - name: Change directory and Zip Artifacts
         run: |

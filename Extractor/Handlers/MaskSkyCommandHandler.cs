@@ -27,7 +27,7 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
 
 
                 loadingModelProgressTask.IsIndeterminate = true;
-                _skyRemovalModel = await SkyRemovalModel.CreateAsync();
+                _skyRemovalModel = await SkyRemovalModel.CreateAsync(arguments.Engine);
                 loadingModelProgressTask.Complete();
 
 

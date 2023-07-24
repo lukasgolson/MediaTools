@@ -15,6 +15,8 @@ public static class CommandOptions
     public const string LengthLabel = "--length";
     
     public const string MaskLabel = "--mask";
+    
+    public const string EngineLabel = "--engine";
 
 
     public static readonly CommandOption InputOption = new(InputLabel, new[]
@@ -60,5 +62,10 @@ public static class CommandOptions
     public static readonly CommandOption Mask = new(MaskLabel, new[]
     {
         "The mask to apply to the output. Default: none. Example: --mask sky"
+    });
+    
+    public static readonly CommandOption EngineOption = new(EngineLabel, new[]
+    {
+        "The engine to use for processing. Default: cpu. Options: cpu, cuda, tensor-rt, directml, auto"
     });
 }

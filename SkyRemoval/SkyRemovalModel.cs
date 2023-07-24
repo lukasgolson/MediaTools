@@ -23,16 +23,14 @@ namespace SkyRemoval
         private SkyRemovalModel(string modelPath, ExecutionEngine engine)
         {
 
-            SessionOptions sessionOptions;
-
             if (engine != ExecutionEngine.Auto)
             {
-                sessionOptions = engine switch
+                var sessionOptions = engine switch
                 {
                     ExecutionEngine.CPU => CreateCpuSessionOptions(),
                     ExecutionEngine.CUDA => CreateCudaSession(),
                     ExecutionEngine.TensorRT => SessionOptions.MakeSessionOptionWithTensorrtProvider(),
-                    ExecutionEngine.Auto => throw new ArgumentException("Auto is not a valid engine", nameof(engine)),
+                    ExecutionEngine.DirectML => CreateDirectMl(),
                     _ => throw new ArgumentOutOfRangeException(nameof(engine), engine, null)
                 };
 
@@ -44,8 +42,10 @@ namespace SkyRemoval
                     modelPath,
                     () => CreateTensorRt(),
                     () => CreateCudaSession(),
+                    () => CreateDirectMl(),
                     CreateCpuSessionOptions
                 );
+
             }
         }
 
@@ -60,7 +60,6 @@ namespace SkyRemoval
                 }
                 catch (Exception)
                 {
-                    Console.WriteLine("Failed to create an InferenceSession with a provider");
                     // Ignore
                 }
             }
@@ -94,10 +93,9 @@ namespace SkyRemoval
         {
             var sessionOptions = new SessionOptions();
             sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
-            sessionOptions.ExecutionMode = ExecutionMode.ORT_PARALLEL;
+            sessionOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
             sessionOptions.EnableMemoryPattern = true;
-            sessionOptions.InterOpNumThreads = 16;
-            sessionOptions.IntraOpNumThreads = 16;
+
 
             return sessionOptions;
         }
@@ -105,6 +103,15 @@ namespace SkyRemoval
         private static SessionOptions CreateTensorRt(int gpuId = 0)
         {
             return SessionOptions.MakeSessionOptionWithTensorrtProvider(gpuId);
+        }
+
+        private static SessionOptions CreateDirectMl(int gpuId = 0)
+        {
+            SessionOptions sessionOptions = new SessionOptions();
+            sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+            sessionOptions.AppendExecutionProvider_DML(gpuId);
+
+            return sessionOptions;
         }
 
 
