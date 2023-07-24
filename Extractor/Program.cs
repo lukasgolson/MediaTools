@@ -185,6 +185,7 @@ public static class Program
             .WithChildCommand(new ListInformationCommand())
             .WithChildCommand(new ConvertCommand())
             .WithChildCommand(new AnimateCommand())
+            .WithChildCommand(new MaskSkyCommand())
             .Build();
     }
 
