@@ -4,6 +4,7 @@
     <option name="locations">
       <list>
         <option value="$PROJECT_DIR$/Extractor/bin/Release/net7.0/win-x64/publish" />
+        <option value="E:/IRSS Media Tools" />
       </list>
     </option>
   </component>

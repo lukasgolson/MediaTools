@@ -27,7 +27,7 @@ public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskS
         public IParseResult<MaskSkyArguments> Parse(CommandArguments arguments)
         {
             var inputPath = arguments.GetArgument(CommandOptions.InputLabel).ExpectedAsSingleValue();
-            var outputFolder = arguments.GetArgumentOrNull(CommandOptions.OutputLabel)?.ExpectedAsSingleValue() ?? Path.GetFileNameWithoutExtension(inputPath);
+            var outputFolder = arguments.GetArgumentOrNull(CommandOptions.OutputLabel)?.ExpectedAsSingleValue() ?? Path.GetFileNameWithoutExtension(inputPath) + "_mask";
 
 
             var inputDirectory = PathType.None;

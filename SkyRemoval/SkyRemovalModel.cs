@@ -5,6 +5,7 @@ using Emgu.CV.XImgproc;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NumSharp;
+using NumSharp.Extensions;
 
 
 namespace SkyRemoval
@@ -19,17 +20,100 @@ namespace SkyRemoval
         private readonly InferenceSession _session;
 
         // Make the constructor private to prevent direct construction calls.
-        private SkyRemovalModel(string modelPath)
+        private SkyRemovalModel(string modelPath, ExecutionEngine engine)
         {
-            _session = new InferenceSession(modelPath);
+
+            SessionOptions sessionOptions;
+
+            if (engine != ExecutionEngine.Auto)
+            {
+                sessionOptions = engine switch
+                {
+                    ExecutionEngine.CPU => CreateCpuSessionOptions(),
+                    ExecutionEngine.CUDA => CreateCudaSession(),
+                    ExecutionEngine.TensorRT => SessionOptions.MakeSessionOptionWithTensorrtProvider(),
+                    ExecutionEngine.Auto => throw new ArgumentException("Auto is not a valid engine", nameof(engine)),
+                    _ => throw new ArgumentOutOfRangeException(nameof(engine), engine, null)
+                };
+
+                _session = new InferenceSession(modelPath, sessionOptions);
+            }
+            else
+            {
+                _session = CreateInferenceSession(
+                    modelPath,
+                    () => CreateTensorRt(),
+                    () => CreateCudaSession(),
+                    CreateCpuSessionOptions
+                );
+            }
         }
+
+        private static InferenceSession CreateInferenceSession(string modelPath, params Func<SessionOptions>[] sessionOptionFactories)
+        {
+            foreach (var sessionOptionFactory in sessionOptionFactories)
+            {
+                try
+                {
+                    var inferenceSession = new InferenceSession(modelPath, sessionOptionFactory());
+                    return inferenceSession;
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("Failed to create an InferenceSession with a provider");
+                    // Ignore
+                }
+            }
+
+            throw new Exception("Failed to create an InferenceSession with any provider");
+        }
+
+        private static SessionOptions CreateCudaSession(int gpuId = 0, int memoryLimitGb = 6)
+        {
+            var cudaProviderOptions = new OrtCUDAProviderOptions(); // Dispose this finally
+
+            var providerOptionsDict = new Dictionary<string, string>
+            {
+                ["device_id"] = gpuId.ToString(),
+                ["gpu_mem_limit"] = (memoryLimitGb * 1073741824).ToString(),
+                ["arena_extend_strategy"] = "kSameAsRequested",
+                ["cudnn_conv_algo_search"] = "EXHAUSTIVE",
+                ["do_copy_in_default_stream"] = "1",
+                ["cudnn_conv_use_max_workspace"] = "1",
+                ["cudnn_conv1d_pad_to_nc1d"] = "1"
+            };
+
+            cudaProviderOptions.UpdateOptions(providerOptionsDict);
+
+
+            return SessionOptions.MakeSessionOptionWithCudaProvider(cudaProviderOptions);
+        }
+
+
+        private static SessionOptions CreateCpuSessionOptions()
+        {
+            var sessionOptions = new SessionOptions();
+            sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+            sessionOptions.ExecutionMode = ExecutionMode.ORT_PARALLEL;
+            sessionOptions.EnableMemoryPattern = true;
+            sessionOptions.InterOpNumThreads = 16;
+            sessionOptions.IntraOpNumThreads = 16;
+
+            return sessionOptions;
+        }
+
+        private static SessionOptions CreateTensorRt(int gpuId = 0)
+        {
+            return SessionOptions.MakeSessionOptionWithTensorrtProvider(gpuId);
+        }
+
 
         private static SkyRemovalModel? _instance;
         private static readonly SemaphoreSlim SetupSemaphore = new(1, 1);
         private static readonly SemaphoreSlim ModelSemaphore = new(1, 1);
 
 
-        public static async Task<SkyRemovalModel> CreateAsync()
+        public static async Task<SkyRemovalModel> CreateAsync(ExecutionEngine engine = ExecutionEngine.Auto)
         {
             if (_instance != null)
                 return _instance;
@@ -51,7 +135,7 @@ namespace SkyRemoval
                     throw new Exception("Model not setup");
                 }
 
-                _instance = new SkyRemovalModel(_modelPath);
+                _instance = new SkyRemovalModel(_modelPath, engine);
             }
             finally
             {
@@ -63,75 +147,68 @@ namespace SkyRemoval
 
         public async Task<Image<Rgb24>> Run(Image image)
         {
-            await ModelSemaphore.WaitAsync();
 
-            try
+            if (_modelPath == null)
             {
-                if (_modelPath == null)
-                {
-                    throw new Exception("Model not setup");
-                }
-
-                var originalWidth = image.Width;
-                var originalHeight = image.Height;
-
-                var processingImage = image.CloneAs<Rgb24>();
-
-                processingImage.Mutate(x =>
-                {
-                    x.ProcessPixelRowsAsVector4(NormalizePixelRow);
-                    x.Resize(new ResizeOptions
-                    {
-                        Size = new Size(ModelWidth, ModelHeight),
-                        Mode = ResizeMode.Stretch,
-                        Sampler = KnownResamplers.Box
-                    });
-
-                });
-
-                var npImg = TransposeExpandNdArray(ImageToNdArray(processingImage));
-
-                var output = RunOnnxSession(npImg);
-
-                output.Mutate(x =>
-                {
-                    x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
-
-                    x.Resize(new ResizeOptions
-                    {
-                        Size = new Size(originalWidth, originalHeight),
-                        Mode = ResizeMode.Stretch,
-                        Sampler = KnownResamplers.Lanczos3
-                    });
-                });
-
-
-
-                var inputSrc = image.CloneAs<Rgb24>().ConvertToEmguCv().Mat;
-                var outputSrc = output.ConvertToEmguCv().Mat;
-
-                var dst = new Mat();
-
-
-                XImgprocInvoke.GuidedFilter(outputSrc, inputSrc, dst, 20, 0.01f);
-
-                output = dst.ToImage<Bgr, Byte>().ConvertToImageSharp();
-
-
-                output.Mutate(x =>
-                {
-                    x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
-                    x.Grayscale();
-                    x.BinaryThreshold(0.5f);
-                });
-
-                return output;
-
+                throw new Exception("Model not setup");
             }
-            finally
+
+            var originalWidth = image.Width;
+            var originalHeight = image.Height;
+
+            var processingImage = image.CloneAs<Rgb24>();
+
+            processingImage.Mutate(x =>
             {
-                ModelSemaphore.Release();
-            }
+                x.ProcessPixelRowsAsVector4(NormalizePixelRow);
+                x.Resize(new ResizeOptions
+                {
+                    Size = new Size(ModelWidth, ModelHeight),
+                    Mode = ResizeMode.Stretch,
+                    Sampler = KnownResamplers.Box
+                });
+
+            });
+
+            var npImg = TransposeExpandNdArray(ImageToNdArray(processingImage));
+
+            var output = RunOnnxSession(npImg);
+
+            output.Mutate(x =>
+            {
+                x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
+
+                x.Resize(new ResizeOptions
+                {
+                    Size = new Size(originalWidth, originalHeight),
+                    Mode = ResizeMode.Stretch,
+                    Sampler = KnownResamplers.Lanczos3
+                });
+            });
+
+
+
+            var inputSrc = image.CloneAs<Rgb24>().ConvertToEmguCv().Mat;
+            var outputSrc = output.ConvertToEmguCv().Mat;
+
+            var dst = new Mat();
+
+
+            XImgprocInvoke.GuidedFilter(outputSrc, inputSrc, dst, 20, 0.01f);
+
+            output = dst.ToImage<Bgr, Byte>().ConvertToImageSharp();
+
+
+            output.Mutate(x =>
+            {
+                x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
+                x.Grayscale();
+                x.BinaryThreshold(0.5f);
+            });
+
+            return output;
+
+
         }
         private static void Clip(Span<Vector4> pixelRow, float min = 0, float max = 1)
         {
@@ -174,14 +251,12 @@ namespace SkyRemoval
             var tensor = NdArrayToDenseTensor(npImg);
             var inputName = _session.InputNames[0];
 
-            var onnxOutput = _session.Run(new[]
+            using var onnxOutput = _session.Run(new[]
             {
                 NamedOnnxValue.CreateFromTensor(inputName, tensor)
             });
 
             var outputTensor = onnxOutput.First().AsTensor<float>();
-            var batchSize = outputTensor.Dimensions[0];
-            var channels = outputTensor.Dimensions[1];
             var height = outputTensor.Dimensions[2];
             var width = outputTensor.Dimensions[3];
 

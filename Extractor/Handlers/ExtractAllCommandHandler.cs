@@ -30,7 +30,13 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
                 var setupDependenciesProgressTask = ctx.AddTask("[green]Setting up Dependencies[/]", true, 2);
                 var infoProgressTask = ctx.AddTask("[green]Analysing Media File[/]", true, 2);
                 var framesProgressTask = ctx.AddTask("[green]Extracting Frames[/]");
-                var maskProgressTask = ctx.AddTask("[green]Generating Masks[/]");
+
+
+                ProgressTask? maskProgressTask = null;
+                if (extractAllArguments.ImageMaskGeneration != ExtractAllCommand.ImageMaskGeneration.None)
+                {
+                    maskProgressTask = ctx.AddTask("[green]Generating Masks[/]");
+                }
 
                 await CheckArguments(extractAllArguments, checkArgumentsProgressTask);
 
@@ -41,7 +47,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
                 finalFrameCount = GetFrameCount(extractAllArguments, infoProgressTask);
 
                 framesProgressTask.MaxValue(finalFrameCount == 0 ? 1 : finalFrameCount);
-                maskProgressTask.MaxValue(finalFrameCount == 0 ? 1 : finalFrameCount);
+                maskProgressTask?.MaxValue(finalFrameCount == 0 ? 1 : finalFrameCount);
 
                 AnsiConsole.MarkupLineInterpolated($"Extracting {finalFrameCount} frames from {extractAllArguments.InputFile} to {extractAllArguments.FramesOutputFolder}.");
 
@@ -147,7 +153,5 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
         await Task.WhenAll(tasks);
 
         progress.Description("[green]Extracting Frames[/]").Complete();
-
-        GC.Collect(2, GCCollectionMode.Aggressive);
     }
 }

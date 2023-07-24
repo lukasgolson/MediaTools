@@ -31,6 +31,8 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
                 loadingModelProgressTask.Complete();
 
 
+                Directory.CreateDirectory(arguments.OutputPath);
+
                 frameListProgressTask.IsIndeterminate = true;
 
 
