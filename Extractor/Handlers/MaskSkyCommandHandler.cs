@@ -13,8 +13,7 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
 
     public async Task HandleAsync(MaskSkyCommand.MaskSkyArguments arguments, LeafCommand executedCommand)
     {
-        long maxMemory = 2000000000;
-
+      
         
         var stopwatch = Stopwatch.StartNew();
 
@@ -64,20 +63,22 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
 
                 var parallelDataFlowBlockExecutionOptions = new ExecutionDataflowBlockOptions
                 {
-                    MaxDegreeOfParallelism = processorCount * 2,
-                    BoundedCapacity = processorCount * 3,
+                    MaxDegreeOfParallelism = processorCount,
+                    BoundedCapacity = processorCount * 2,
                     EnsureOrdered = false,
                 };
 
                 var serialDataFlowBlockExecutionOptions = new ExecutionDataflowBlockOptions
                 {
                     MaxDegreeOfParallelism = 1,
-                    EnsureOrdered = false
+                    EnsureOrdered = false,
+                    BoundedCapacity = processorCount * 2
                 };
 
                 var dataflowBlockOptions = new DataflowBlockOptions
                 {
                     EnsureOrdered = false,
+                    BoundedCapacity = processorCount * 4
                 };
 
 
@@ -121,7 +122,6 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
                 var postProcessTensorBlock = new TransformBlock<TensorContainer, ImageContainer>(container =>
                 {
                     var output = _skyRemovalModel.ProcessModelResults(container.OriginalImageContainer.Image, container.Tensor);
-
                     postProcessingProgressTask.Increment(1);
 
                     return new ImageContainer(output, container.OriginalImageContainer.Path);
@@ -152,14 +152,14 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
                 postProcessTensorBlock.LinkTo(saveBuffer, dataflowLinkOptions);
                 saveBuffer.LinkTo(saveImageBlock, dataflowLinkOptions);
 
+                long maxMemory = 2000000000;
 
                 foreach (var frame in frameList)
                 {
                     
                     while(true)
                     {
-                        GC.Collect();                                               // Encourage collection of any outstanding garbage
-                        long memory = GC.GetTotalMemory(forceFullCollection: true); // Returns the current memory usage in bytes
+                        var memory = GC.GetTotalMemory(forceFullCollection: true); // Returns the current memory usage in bytes
 
                         if ((maxMemory - memory) >= 30000000) // Checks if there's at least 30 MB free within your set limit
                         {
