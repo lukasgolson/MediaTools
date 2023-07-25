@@ -47,27 +47,23 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
 
                 foreach (var frame in frameList)
                 {
-                    await GenerateMask(frame, arguments.OutputPath);
+                    var inputImage = await Image.LoadAsync(frame);
+
+                    var inputTensor = _skyRemovalModel.PrepareImage(inputImage);
+
+                    var maskTensor = _skyRemovalModel.RunModel(inputTensor);
+                    
+                    var maskImage = _skyRemovalModel.ProcessModelResults(inputImage, maskTensor);
+
+                    await maskImage.SaveAsync(Path.Combine(arguments.OutputPath, Path.GetFileNameWithoutExtension(frame) + "_mask" + Path.GetExtension(frame)));
+                    
                     maskProgressTask.Increment(1);
                 }
-
-
-
-
             });
 
         stopwatch.Stop();
 
         AnsiConsole.MarkupLineInterpolated($"Finished generating {finalMaskCount} masks in {Math.Round(stopwatch.ElapsedMilliseconds * 0.001, 2)} seconds.");
-    }
-    private async Task GenerateMask(string frame, string argumentsOutputPath)
-    {
-        var image = await Image.LoadAsync(frame);
-
-        Debug.Assert(_skyRemovalModel != null, nameof(_skyRemovalModel) + " != null");
-        var mask = await _skyRemovalModel.Run(image);
-
-        await mask.SaveAsync(Path.Combine(argumentsOutputPath, Path.GetFileNameWithoutExtension(frame) + "_mask" + Path.GetExtension(frame)));
     }
 
     private static IEnumerable<string> GenerateFrameList(string inputPath, PathType inputType)

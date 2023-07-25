@@ -140,7 +140,8 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
                 {
                     var maskOutput = Path.Join(extractAllArguments.MasksOutputFolder, $"{imageName}_mask.{extractAllArguments.OutputFormat}");
 
-                    var mask = await skyRemovalModel.Run(frame.CloneAs<Rgb24>());
+                    var mask = skyRemovalModel.Run(frame.CloneAs<Rgb24>());
+
                     await mask.SaveAsync(maskOutput).ConfigureAwait(false);
 
                     maskProgress?.Increment(1);

@@ -81,8 +81,6 @@ namespace SkyRemoval
                 ["cudnn_conv1d_pad_to_nc1d"] = "1"
             };
 
-            providerOptionsDict["cudnn_conv1d_pad_to_nc1d"] = "1";
-
 
             cudaProviderOptions.UpdateOptions(providerOptionsDict);
 
@@ -166,17 +164,66 @@ namespace SkyRemoval
             return _instance;
         }
 
-        public async Task<Image<Rgb24>> Run(Image image)
+        public Image<Rgb24> Run(Image image)
         {
+            var npImg = PrepareImage(image);
 
-            if (_modelPath == null)
+            var output = RunModel(npImg);
+
+            return ProcessModelResults(image, output);
+        }
+        public Image<Rgb24> ProcessModelResults(Image originalImage, Tensor<float> outputTensor)
+        {
+            var height = outputTensor.Dimensions[2];
+            var width = outputTensor.Dimensions[3];
+
+            var processedImage = new Image<Rgb24>(Configuration.Default, width, height);
+
+            for (var y = 0; y < height; y++)
             {
-                throw new Exception("Model not setup");
+                for (var x = 0; x < width; x++)
+                {
+                    var pixelValue = (byte)(outputTensor[0, 0, y, x] * 255); // Using outputTensor instead of ndArray
+                    processedImage[x, y] = new Rgb24(pixelValue, pixelValue, pixelValue);
+                }
             }
 
-            var originalWidth = image.Width;
-            var originalHeight = image.Height;
+            var originalWidth = originalImage.Width;
+            var originalHeight = originalImage.Height;
 
+            processedImage.Mutate(x =>
+            {
+                x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
+
+                x.Resize(new ResizeOptions
+                {
+                    Size = new Size(originalWidth, originalHeight),
+                    Mode = ResizeMode.Stretch,
+                    Sampler = KnownResamplers.Lanczos3
+                });
+            });
+
+            var inputSrc = originalImage.CloneAs<Rgb24>().ConvertToEmguCv().Mat;
+            var outputSrc = processedImage.ConvertToEmguCv().Mat;
+
+            var dst = new Mat();
+
+
+            XImgprocInvoke.GuidedFilter(outputSrc, inputSrc, dst, 20, 0.01f);
+
+            processedImage = dst.ToImage<Bgr, byte>().ConvertToImageSharp();
+
+
+            processedImage.Mutate(x =>
+            {
+                x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
+                x.Grayscale();
+                x.BinaryThreshold(0.5f);
+            });
+            return processedImage;
+        }
+        public DenseTensor<float> PrepareImage(Image image)
+        {
             var processingImage = image.CloneAs<Rgb24>();
 
             processingImage.Mutate(x =>
@@ -193,43 +240,7 @@ namespace SkyRemoval
 
             var npImg = TransposeExpandNdArray(ImageToNdArray(processingImage));
 
-            var output = RunOnnxSession(npImg);
-
-            output.Mutate(x =>
-            {
-                x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
-
-                x.Resize(new ResizeOptions
-                {
-                    Size = new Size(originalWidth, originalHeight),
-                    Mode = ResizeMode.Stretch,
-                    Sampler = KnownResamplers.Lanczos3
-                });
-            });
-
-
-
-            var inputSrc = image.CloneAs<Rgb24>().ConvertToEmguCv().Mat;
-            var outputSrc = output.ConvertToEmguCv().Mat;
-
-            var dst = new Mat();
-
-
-            XImgprocInvoke.GuidedFilter(outputSrc, inputSrc, dst, 20, 0.01f);
-
-            output = dst.ToImage<Bgr, Byte>().ConvertToImageSharp();
-
-
-            output.Mutate(x =>
-            {
-                x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
-                x.Grayscale();
-                x.BinaryThreshold(0.5f);
-            });
-
-            return output;
-
-
+            return NdArrayToDenseTensor(npImg);
         }
         private static void Clip(Span<Vector4> pixelRow, float min = 0, float max = 1)
         {
@@ -267,9 +278,13 @@ namespace SkyRemoval
             return npImg.reshape(1, npImg.shape[0], npImg.shape[1], npImg.shape[2]);
         }
 
-        private Image<Rgb24> RunOnnxSession(NDArray npImg)
+        public Tensor<float> RunModel(Tensor<float> tensor)
         {
-            var tensor = NdArrayToDenseTensor(npImg);
+            if (_modelPath == null)
+            {
+                throw new Exception("Model not setup");
+            }
+
             var inputName = _session.InputNames[0];
 
             using var onnxOutput = _session.Run(new[]
@@ -278,21 +293,9 @@ namespace SkyRemoval
             });
 
             var outputTensor = onnxOutput.First().AsTensor<float>();
-            var height = outputTensor.Dimensions[2];
-            var width = outputTensor.Dimensions[3];
 
-            var img = new Image<Rgb24>(Configuration.Default, width, height);
 
-            for (var y = 0; y < height; y++)
-            {
-                for (var x = 0; x < width; x++)
-                {
-                    var pixelValue = (byte)(outputTensor[0, 0, y, x] * 255); // Using outputTensor instead of ndArray
-                    img[x, y] = new Rgb24(pixelValue, pixelValue, pixelValue);
-                }
-            }
-
-            return img;
+            return outputTensor;
         }
 
 
