@@ -238,7 +238,9 @@ namespace SkyRemoval
 
             });
 
-            var npImg = TransposeExpandNdArray(ImageToNdArray(processingImage));
+            var NDArray = ImageToNdArray(processingImage);
+
+            var npImg = TransposeExpandNdArray(NDArray);
 
             return NdArrayToDenseTensor(npImg);
         }
@@ -292,7 +294,7 @@ namespace SkyRemoval
                 NamedOnnxValue.CreateFromTensor(inputName, tensor)
             });
 
-            var outputTensor = onnxOutput.First().AsTensor<float>();
+            var outputTensor = onnxOutput.First().AsTensor<float>().Clone();
 
 
             return outputTensor;

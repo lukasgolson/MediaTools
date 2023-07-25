@@ -35,6 +35,7 @@
         <PackageReference Include="Spectre.Console" Version="0.46.1-preview.0.20" />
         <PackageReference Include="Spectre.Console.ImageSharp" Version="0.46.1-preview.0.20" />
         <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0-preview.3.23174.8" />
+        <PackageReference Include="System.Threading.Tasks.Dataflow" Version="7.0.0" />
         <PackageReference Include="TreeBasedCli" Version="3.2.5" />
     </ItemGroup>
 
