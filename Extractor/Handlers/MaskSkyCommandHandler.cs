@@ -13,13 +13,14 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
 
     public async Task HandleAsync(MaskSkyCommand.MaskSkyArguments arguments, LeafCommand executedCommand)
     {
-      
-        
+
+
         var stopwatch = Stopwatch.StartNew();
 
 
         var finalMaskCount = 0;
 
+        const long maxMemory = 2000000000;
         await AnsiConsole.Progress()
             .AutoClear(false) // Do not remove the task list when done
             .Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new ElapsedTimeColumn(), new RemainingTimeColumn(), new SpinnerColumn())
@@ -96,8 +97,8 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
 
 
                 var imageBufferBlock = new BufferBlock<ImageContainer>(dataflowBlockOptions);
-                
-          
+
+
                 var createTensorBlock = new TransformBlock<ImageContainer, TensorContainer>(imageContainer =>
                 {
                     var tensor = _skyRemovalModel.PrepareImage(imageContainer.Image);
@@ -131,7 +132,7 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
 
                 var saveImageBlock = new ActionBlock<ImageContainer>(async container =>
                 {
-                    var path = Path.Combine(arguments.OutputPath, Path.GetFileNameWithoutExtension(container.Path) + Path.GetExtension(container.Path));
+                    var path = Path.Combine(arguments.OutputPath, Path.GetFileNameWithoutExtension(container.Path) + "_mask" + Path.GetExtension(container.Path));
                     await container.Image.SaveAsync(path);
                     savingProgressTask.Increment(1);
                 }, parallelDataFlowBlockExecutionOptions);
@@ -152,12 +153,10 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
                 postProcessTensorBlock.LinkTo(saveBuffer, dataflowLinkOptions);
                 saveBuffer.LinkTo(saveImageBlock, dataflowLinkOptions);
 
-                long maxMemory = 2000000000;
-
                 foreach (var frame in frameList)
                 {
-                    
-                    while(true)
+
+                    while (true)
                     {
                         var memory = GC.GetTotalMemory(forceFullCollection: true); // Returns the current memory usage in bytes
 
@@ -166,10 +165,7 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
                             await inputBufferBlock.SendAsync(frame);
                             break; // Once the SendAsync is executed, break from the while loop
                         }
-                        else
-                        {
-                            Thread.Sleep(500); // If there's not enough memory, wait for a bit before checking again
-                        }
+                        Thread.Sleep(500); // If there's not enough memory, wait for a bit before checking again
                     }
                 }
 
@@ -181,28 +177,6 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
         stopwatch.Stop();
 
         AnsiConsole.MarkupLineInterpolated($"Finished generating {finalMaskCount} masks in {Math.Round(stopwatch.ElapsedMilliseconds * 0.001, 2)} seconds.");
-    }
-
-    private class TensorContainer
-    {
-        public readonly Tensor<float> Tensor;
-        public readonly ImageContainer OriginalImageContainer;
-        public TensorContainer(Tensor<float> tensor, ImageContainer originalImageContainer)
-        {
-            Tensor = tensor;
-            OriginalImageContainer = originalImageContainer;
-        }
-    }
-
-    private class ImageContainer
-    {
-        public readonly Image Image;
-        public readonly string Path;
-        public ImageContainer(Image image, string path)
-        {
-            Image = image;
-            Path = path;
-        }
     }
 
     private static IEnumerable<string> GenerateFrameList(string inputPath, PathType inputType)
@@ -218,6 +192,28 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
             {
                 yield return directory;
             }
+        }
+    }
+
+    private class TensorContainer
+    {
+        public readonly ImageContainer OriginalImageContainer;
+        public readonly Tensor<float> Tensor;
+        public TensorContainer(Tensor<float> tensor, ImageContainer originalImageContainer)
+        {
+            Tensor = tensor;
+            OriginalImageContainer = originalImageContainer;
+        }
+    }
+
+    private class ImageContainer
+    {
+        public readonly Image Image;
+        public readonly string Path;
+        public ImageContainer(Image image, string path)
+        {
+            Image = image;
+            Path = path;
         }
     }
 }
