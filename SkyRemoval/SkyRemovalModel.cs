@@ -5,7 +5,6 @@ using Emgu.CV.XImgproc;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NumSharp;
-using NumSharp.Extensions;
 
 
 namespace SkyRemoval
@@ -20,7 +19,7 @@ namespace SkyRemoval
         private readonly InferenceSession _session;
 
         // Make the constructor private to prevent direct construction calls.
-        private SkyRemovalModel(string modelPath, ExecutionEngine engine)
+        private SkyRemovalModel(string modelPath, ExecutionEngine engine, int gpuId)
         {
 
             if (engine != ExecutionEngine.Auto)
@@ -40,9 +39,9 @@ namespace SkyRemoval
             {
                 _session = CreateInferenceSession(
                     modelPath,
-                    () => CreateTensorRt(),
-                    () => CreateCudaSession(),
-                    () => CreateDirectMl(),
+                    () => CreateTensorRt(gpuId),
+                    () => CreateCudaSession(gpuId),
+                    () => CreateDirectMl(gpuId),
                     CreateCpuSessionOptions
                 );
 
@@ -69,12 +68,12 @@ namespace SkyRemoval
 
         private static SessionOptions CreateCudaSession(int gpuId = 0, int memoryLimitGb = 6)
         {
+
             var cudaProviderOptions = new OrtCUDAProviderOptions(); // Dispose this finally
 
             var providerOptionsDict = new Dictionary<string, string>
             {
-                ["device_id"] = gpuId.ToString(),
-                ["gpu_mem_limit"] = (memoryLimitGb * 1073741824).ToString(),
+                ["gpu_mem_limit"] = "4294967296",
                 ["arena_extend_strategy"] = "kSameAsRequested",
                 ["cudnn_conv_algo_search"] = "EXHAUSTIVE",
                 ["do_copy_in_default_stream"] = "1",
@@ -82,10 +81,12 @@ namespace SkyRemoval
                 ["cudnn_conv1d_pad_to_nc1d"] = "1"
             };
 
+            providerOptionsDict["cudnn_conv1d_pad_to_nc1d"] = "1";
+
+
             cudaProviderOptions.UpdateOptions(providerOptionsDict);
 
-
-            return SessionOptions.MakeSessionOptionWithCudaProvider(cudaProviderOptions);
+            return SessionOptions.MakeSessionOptionWithCudaProvider(gpuId);
         }
 
 
@@ -102,12 +103,27 @@ namespace SkyRemoval
 
         private static SessionOptions CreateTensorRt(int gpuId = 0)
         {
+            var providerOptionsDict = new Dictionary<string, string>
+            {
+                ["ORT_TENSORRT_MAX_WORKSPACE_SIZE"] = "4294967296",
+                ["ORT_TENSORRT_FP16_ENABLE"] = "1",
+                ["ORT_TENSORRT_ENGINE_CACHE_ENABLE"] = "1",
+                ["ORT_TENSORRT_BUILDER_OPTIMIZATION_LEVEL"] = "5",
+                ["ORT_TENSORRT_CONTEXT_MEMORY_SHARING_ENABLE"] = "1"
+
+
+            };
+
+
+
+
+
             return SessionOptions.MakeSessionOptionWithTensorrtProvider(gpuId);
         }
 
         private static SessionOptions CreateDirectMl(int gpuId = 0)
         {
-            SessionOptions sessionOptions = new SessionOptions();
+            var sessionOptions = new SessionOptions();
             sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
             sessionOptions.AppendExecutionProvider_DML(gpuId);
 
@@ -117,10 +133,8 @@ namespace SkyRemoval
 
         private static SkyRemovalModel? _instance;
         private static readonly SemaphoreSlim SetupSemaphore = new(1, 1);
-        private static readonly SemaphoreSlim ModelSemaphore = new(1, 1);
 
-
-        public static async Task<SkyRemovalModel> CreateAsync(ExecutionEngine engine = ExecutionEngine.Auto)
+        public static async Task<SkyRemovalModel> CreateAsync(ExecutionEngine engine = ExecutionEngine.Auto, int gpuId = 0)
         {
             if (_instance != null)
                 return _instance;
@@ -142,7 +156,7 @@ namespace SkyRemoval
                     throw new Exception("Model not setup");
                 }
 
-                _instance = new SkyRemovalModel(_modelPath, engine);
+                _instance = new SkyRemovalModel(_modelPath, engine, gpuId);
             }
             finally
             {
