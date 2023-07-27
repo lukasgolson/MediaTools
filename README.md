@@ -6,7 +6,7 @@ Welcome to the **IRSS Media Tools**! This package offers a versatile set of comm
 
 IRSS Media Tools, along with the incorporated third-party libraries, are subject to various licenses:
 
-- **FFmpeg**: Licensed under the GNU General Public License (GPL), Version 2 or later. [Source code and license details](https://www.ffmpeg.org/legal.html).
+- **FFmpeg**: Licensed under the GNU General Public License (GPL), Version 2 or later. [Source code and license details]((https://github.com/FFmpeg/FFmpeg).
 - **ImageSharp**: Licensed under the Apache License, Version 2.0. [Source code and license details](https://github.com/SixLabors/ImageSharp/blob/master/LICENSE).
 - **FFMediaToolkit**: Licensed under the MIT License. [Source code and license details](https://github.com/radek-k/FFMediaToolkit).
 - **Emgu.CV**: Licensed under the GNU General Public License (GPL), Version 3. [Source code and license details](https://github.com/emgucv/emgucv/tree/master).
