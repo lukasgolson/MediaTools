@@ -1,38 +1,41 @@
 # IRSS Media Tools
 
-Welcome to the **IRSS Media Tools**! A package of versatile media manipulation CLI tools that help you process audio and video
-files efficiently. The IRSS Media Tools leverage the power of trusted and well-known libraries like FFmpeg and ImageSharp to deliver
-high-quality results.
+Welcome to the **IRSS Media Tools**! This package offers a versatile set of command-line interface (CLI) tools designed for efficient processing of audio and video files. We leverage the capabilities of renowned libraries such as FFmpeg and ImageSharp to ensure high-quality results.
 
-## License Information
+## Licensing Information
 
-IRSS Media Tools uses third-party libraries that are subject to their own licensing:
+IRSS Media Tools, along with the incorporated third-party libraries, are subject to various licenses:
 
-- **FFmpeg** is licensed under the GNU General Public License (GPL) version 2 or later. For more details, please
-  see [FFmpeg's license documentation](https://www.ffmpeg.org/legal.html).
-- **ImageSharp** is licensed under the Apache License, Version 2.0. For more information, refer
-  to [ImageSharp's license page](https://github.com/SixLabors/ImageSharp/blob/master/LICENSE).
+- **FFmpeg**: Licensed under the GNU General Public License (GPL), Version 2 or later. [Source code and license details](https://www.ffmpeg.org/legal.html).
+- **ImageSharp**: Licensed under the Apache License, Version 2.0. [Source code and license details](https://github.com/SixLabors/ImageSharp/blob/master/LICENSE).
+- **FFMediaToolkit**: Licensed under the MIT License. [Source code and license details](https://github.com/radek-k/FFMediaToolkit).
+- **Emgu.CV**: Licensed under the GNU General Public License (GPL), Version 3. [Source code and license details](https://github.com/emgucv/emgucv/tree/master).
+- **OpenCV**: Licensed under the Apache License, Version 2.0. [Source code and license details](https://github.com/opencv/opencv).
+- **SkyRemoval**: Licensed under the GNU Affero General Public License (AGPL), Version 3. [Source code and license details](https://github.com/OpenDroneMap/SkyRemoval).
+- **Spectre.Console**: Licensed under the MIT License. [Source code and license details](https://github.com/spectreconsole/spectre.console).
+- **TreeBasedCli**: Licensed under the Apache License, Version 2.0. [Source code and license details](https://github.com/pgolebiowski/tree-based-cli).
 
-Please review the license files included with this software for comprehensive information.
+The software, IRSS Media Tools, is licensed under the GNU Affero General Public License (AGPL), Version 3.0. You can find additional details about this license in the [license.md](https://github.com/lukasdragon/MediaTools/blob/master/LICENSE) file. 
 
-## Installation
+Please make sure to review the license files of both this software and its individual libraries for comprehensive information.
 
-1. Download the latest version of IRSS Media Tools from the official repository (not yet public).
-2. Extract the contents of the downloaded archive to a directory of your choice.
+## Installation Guide
+
+1. Download the latest version of IRSS Media Tools from the official repository (the public release is pending).
+2. Decompress the contents of the downloaded archive to a directory of your choice.
 
 ## Adding to System Path (Optional)
 
-For ease of use, you can add IRSS Media Tools to your system path. This will allow you to run the program from any
-directory without specifying the full path to `IRSSMediaTools.exe`.
+Adding IRSS Media Tools to your system path facilitates its use, allowing you to run the program from any directory without specifying the full path to `IRSSMediaTools.exe`.
 
-- Open the System Properties > Advanced > Environment Variables.
-- In the "System variables" section, find the “Path” variable, then click Edit.
-- Add the full path to the directory where you extracted `IRSSMediaTools.exe`.
-- Click OK to save the changes.
+- Navigate to System Properties > Advanced > Environment Variables.
+- In the "System variables" section, locate the “Path” variable and click Edit.
+- Append the full path to the directory where you extracted `IRSSMediaTools.exe`.
+- Click OK to confirm the changes.
 
-## Usage
+## How to Use
 
-To use the IRSS Media Tools, open a command line interface (e.g., CMD.exe) and run `IRSSMediaTools.exe`.
+To utilize the IRSS Media Tools, initiate a command line interface (for instance, CMD.exe) and execute `IRSSMediaTools.exe`.
 
 Example:
 
@@ -40,22 +43,20 @@ Example:
 IRSSMediaTools.exe [option] --input [input file] --output [output file]
 ```
 
-For a list of available options and their descriptions, you can run the following command:
+For an overview of available options and their descriptions, execute the following command:
 
 ```shell
 IRSSMediaTools.exe --help
 ```
 
-This will provide you with information on the various functionalities and how to use them effectively.
+This will yield information on various functionalities and guidance on effective usage.
 
 ## Support and Contact
 
-If you have questions, issues or need further clarification regarding the usage of IRSS Media Tools, please don't
-hesitate to reach out to Lukas Olson at [lukas.olson@ubc.ca](mailto:lukas.olson@ubc.ca).
+Should you encounter any questions, issues, or require further clarification regarding the usage of IRSS Media Tools, feel free to contact Lukas Olson at [lukas.olson@ubc.ca](mailto:lukas.olson@ubc.ca).
 
 ## Contributing
 
-The IRSS Media Tools are an open project and contributions are welcome. If you are interested in contributing, please contact
-Lukas Olson for more information on how you can help improve the IRSS Media Tools.
+IRSS Media Tools is an open project; hence, contributions are welcome. If you are interested in contributing, please reach out to Lukas Olson to learn how you can assist in enhancing the IRSS Media Tools.
 
-Thank you for using the IRSS Media Tools!
+Thank you for choosing IRSS Media Tools!
