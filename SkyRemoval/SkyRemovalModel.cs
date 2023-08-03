@@ -5,8 +5,6 @@ using Emgu.CV.XImgproc;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NumSharp;
-
-
 namespace SkyRemoval
 {
     public class SkyRemovalModel
@@ -15,6 +13,10 @@ namespace SkyRemoval
         private const int ModelHeight = 384;
 
         private static string? _modelPath;
+
+
+        private static SkyRemovalModel? _instance;
+        private static readonly SemaphoreSlim SetupSemaphore = new(1, 1);
 
         private readonly InferenceSession _session;
 
@@ -116,7 +118,9 @@ namespace SkyRemoval
 
 
 
-            return SessionOptions.MakeSessionOptionWithTensorrtProvider(gpuId);
+            var options = SessionOptions.MakeSessionOptionWithTensorrtProvider(gpuId);
+            options.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_FATAL;
+            return options;
         }
 
         private static SessionOptions CreateDirectMl(int gpuId = 0)
@@ -127,10 +131,6 @@ namespace SkyRemoval
 
             return sessionOptions;
         }
-
-
-        private static SkyRemovalModel? _instance;
-        private static readonly SemaphoreSlim SetupSemaphore = new(1, 1);
 
         public static async Task<SkyRemovalModel> CreateAsync(ExecutionEngine engine = ExecutionEngine.Auto, int gpuId = 0)
         {
@@ -219,6 +219,7 @@ namespace SkyRemoval
                 x.ProcessPixelRowsAsVector4(pixelRow => Clip(pixelRow, 0f, 1f));
                 x.Grayscale();
                 x.BinaryThreshold(0.5f);
+                x.Invert();
             });
             return processedImage;
         }
