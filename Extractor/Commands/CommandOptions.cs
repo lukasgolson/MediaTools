@@ -17,6 +17,8 @@ public static class CommandOptions
     public const string MaskLabel = "--mask";
     
     public const string EngineLabel = "--engine";
+    
+    public const string GPUCount = "--gpu-count";
 
 
     public static readonly CommandOption InputOption = new(InputLabel, new[]
@@ -67,5 +69,10 @@ public static class CommandOptions
     public static readonly CommandOption EngineOption = new(EngineLabel, new[]
     {
         "The engine to use for processing. Default: cpu. Options: cpu, cuda, tensor-rt, directml, auto"
+    });
+    
+    public static readonly CommandOption ProcessorCountOption = new(GPUCount, new[]
+    {
+        "The number of GPUs to use. Default: 1"
     });
 }

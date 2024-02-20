@@ -1,6 +1,8 @@
 ﻿using Extractor.Handlers;
+using SkyRemoval;
 using TreeBasedCli;
 using TreeBasedCli.Exceptions;
+
 namespace Extractor.Commands;
 
 public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskSkyCommand.Parser, MaskSkyCommandHandler>
@@ -15,13 +17,18 @@ public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskS
         {
             CommandOptions.InputOption,
             CommandOptions.OutputOption,
-            CommandOptions.EngineOption
+            CommandOptions.EngineOption,
+            CommandOptions.ProcessorCountOption
         })
     {
     }
 
-    public record MaskSkyArguments(string InputPath, string OutputPath, PathType InputType, SkyRemoval.ExecutionEngine Engine) : IParsedCommandArguments;
-
+    public record MaskSkyArguments(
+        string InputPath,
+        string OutputPath,
+        PathType InputType,
+        ExecutionEngine Engine,
+        int ProcessorCount) : IParsedCommandArguments;
 
 
     public class Parser : ICommandArgumentParser<MaskSkyArguments>
@@ -29,17 +36,25 @@ public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskS
         public IParseResult<MaskSkyArguments> Parse(CommandArguments arguments)
         {
             var inputPath = arguments.GetArgument(CommandOptions.InputLabel).ExpectedAsSingleValue();
-            var outputFolder = arguments.GetArgumentOrNull(CommandOptions.OutputLabel)?.ExpectedAsSingleValue() ?? Path.GetFileNameWithoutExtension(inputPath) + "_mask";
-            var engine = arguments.GetArgumentOrNull(CommandOptions.EngineLabel)?.ExpectedAsSingleValue() ?? "auto";
-
-            var executionEngine = engine.ToLowerInvariant() switch
+            var outputFolder = arguments.GetArgumentOrNull(CommandOptions.OutputLabel)?.ExpectedAsSingleValue() ??
+                               Path.GetFileNameWithoutExtension(inputPath) + "_mask";
+            var engine = arguments.GetArgumentOrNull(CommandOptions.EngineLabel)
+                ?.ExpectedAsEnumValue<ExecutionEngine>();
+            var processorCount = arguments.GetArgumentOrNull(CommandOptions.GPUCount)?.ExpectedAsSingleValue() ?? "1";
+            
+            if (int.TryParse(processorCount, out var count))
             {
-                "cpu" => SkyRemoval.ExecutionEngine.CPU,
-                "cuda" => SkyRemoval.ExecutionEngine.CUDA,
-                "tensor-rt" => SkyRemoval.ExecutionEngine.TensorRT,
-                "directml" => SkyRemoval.ExecutionEngine.DirectML,
-                _ => throw new MessageOnlyException("Invalid engine selected. Valid options are: cpu, cuda, tensor-rt, directml")
-            };
+                if (count < 1)
+                {
+                    throw new MessageOnlyException("Processor count must be at least 1.");
+                }
+            }
+            else
+            {
+                throw new MessageOnlyException("Processor count must be an integer.");
+            }
+            
+          
 
             var inputDirectory = PathType.None;
 
@@ -63,7 +78,8 @@ public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskS
                 inputPath,
                 outputFolder,
                 inputDirectory,
-                executionEngine
+                engine ?? ExecutionEngine.Auto,
+                int.Parse(processorCount)
             );
 
 

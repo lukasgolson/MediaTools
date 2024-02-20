@@ -39,7 +39,7 @@ namespace SkyRemoval
                     _ => throw new ArgumentOutOfRangeException(nameof(engine), engine, null)
                 };
 
-                adjustCommonSessionSettings(sessionOptions);
+                AdjustCommonSessionSettings(sessionOptions);
 
                 _session = new InferenceSession(modelPath, sessionOptions);
             }
@@ -56,7 +56,8 @@ namespace SkyRemoval
         }
 
 
-        private void adjustCommonSessionSettings(SessionOptions sessionOptions)
+
+        private void AdjustCommonSessionSettings(SessionOptions sessionOptions)
         {
             sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
             sessionOptions.ExecutionMode = ExecutionMode.ORT_PARALLEL;
@@ -69,7 +70,8 @@ namespace SkyRemoval
             foreach (var sessionOptionFactory in sessionOptionFactories)
             {
                 var options = sessionOptionFactory();
-                adjustCommonSessionSettings(options);
+
+                AdjustCommonSessionSettings(options);
 
 
                 try
