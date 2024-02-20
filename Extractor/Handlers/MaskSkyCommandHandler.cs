@@ -9,7 +9,7 @@ namespace Extractor.Handlers;
 
 public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyArguments>
 {
-    private SkyRemovalModel? _skyRemovalModel = null;
+    private readonly List<SkyRemovalModel> _models = [];
 
     public async Task HandleAsync(MaskSkyCommand.MaskSkyArguments arguments, LeafCommand executedCommand)
     {
@@ -38,7 +38,16 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
 
 
                 loadingModelProgressTask.IsIndeterminate = true;
-                _skyRemovalModel = await SkyRemovalModel.CreateAsync(arguments.Engine);
+                
+                
+                
+                foreach (var gpu in Enumerable.Range(0, arguments.GpuCount))
+                {
+                    _models.Add(await SkyRemovalModel.CreateAsync(arguments.Engine, gpu));
+                }
+                
+                
+            
                 loadingModelProgressTask.Complete();
 
 
@@ -73,13 +82,19 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
                 {
                     MaxDegreeOfParallelism = 1,
                     EnsureOrdered = false,
-                    BoundedCapacity = processorCount * 2
+                    BoundedCapacity = 1
                 };
 
                 var dataflowBlockOptions = new DataflowBlockOptions
                 {
                     EnsureOrdered = false,
                     BoundedCapacity = processorCount * 4
+                };
+                
+                var dataflowLinkOptions = new DataflowLinkOptions
+                {
+                    PropagateCompletion = true,
+                    Append = true,
                 };
 
 
@@ -101,28 +116,43 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
 
                 var createTensorBlock = new TransformBlock<ImageContainer, TensorContainer>(imageContainer =>
                 {
-                    var tensor = _skyRemovalModel.PrepareImage(imageContainer.Image);
+                    var tensor = _models[0].PrepareImage(imageContainer.Image);
                     var container = new TensorContainer(tensor, imageContainer);
 
                     prepareImageProgressTask.Increment(1);
 
                     return container;
-                }, serialDataFlowBlockExecutionOptions);
+                }, parallelDataFlowBlockExecutionOptions);
 
                 var modelBufferBlock = new BufferBlock<TensorContainer>(dataflowBlockOptions);
 
-                var generateMaskTensorBlock = new TransformBlock<TensorContainer, TensorContainer>(tensorContainer =>
+                
+                
+                var postMaskingBufferBlock = new BufferBlock<TensorContainer>(dataflowBlockOptions);
+
+                // for each model, create a new block that is connected to the modelBufferBlock and then to a join block
+
+                foreach (var skyRemovalModel in _models)
                 {
-                    var result = _skyRemovalModel.RunModel(tensorContainer.Tensor);
+                    var generateMaskTensorBlock = new TransformBlock<TensorContainer, TensorContainer>(tensorContainer =>
+                    {
+                        var result = skyRemovalModel.RunModel(tensorContainer.Tensor);
 
-                    runningModelProgressTask.Increment(1);
+                        runningModelProgressTask.Increment(1);
 
-                    return new TensorContainer(result, tensorContainer.OriginalImageContainer);
-                }, serialDataFlowBlockExecutionOptions);
+                        return new TensorContainer(result, tensorContainer.OriginalImageContainer);
+                    }, serialDataFlowBlockExecutionOptions);
+                    
+                    modelBufferBlock.LinkTo(generateMaskTensorBlock, dataflowLinkOptions);
+                    generateMaskTensorBlock.LinkTo(postMaskingBufferBlock, dataflowLinkOptions);
+                }
+                
+                
+             
 
                 var postProcessTensorBlock = new TransformBlock<TensorContainer, ImageContainer>(container =>
                 {
-                    var output = _skyRemovalModel.ProcessModelResults(container.OriginalImageContainer.Image, container.Tensor);
+                    var output = _models[0].ProcessModelResults(container.OriginalImageContainer.Image, container.Tensor);
                     postProcessingProgressTask.Increment(1);
 
                     return new ImageContainer(output, container.OriginalImageContainer.Path);
@@ -138,18 +168,13 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
                 }, parallelDataFlowBlockExecutionOptions);
 
 
-                var dataflowLinkOptions = new DataflowLinkOptions
-                {
-                    PropagateCompletion = true,
-                    Append = true,
-                };
+              
 
                 inputBufferBlock.LinkTo(loadImageBlock, dataflowLinkOptions);
                 loadImageBlock.LinkTo(imageBufferBlock, dataflowLinkOptions);
                 imageBufferBlock.LinkTo(createTensorBlock, dataflowLinkOptions);
                 createTensorBlock.LinkTo(modelBufferBlock, dataflowLinkOptions);
-                modelBufferBlock.LinkTo(generateMaskTensorBlock, dataflowLinkOptions);
-                generateMaskTensorBlock.LinkTo(postProcessTensorBlock, dataflowLinkOptions);
+                postMaskingBufferBlock.LinkTo(postProcessTensorBlock, dataflowLinkOptions);
                 postProcessTensorBlock.LinkTo(saveBuffer, dataflowLinkOptions);
                 saveBuffer.LinkTo(saveImageBlock, dataflowLinkOptions);
 
