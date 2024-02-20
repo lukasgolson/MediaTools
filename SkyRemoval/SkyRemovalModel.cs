@@ -5,6 +5,7 @@ using Emgu.CV.XImgproc;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NumSharp;
+
 namespace SkyRemoval
 {
     public class SkyRemovalModel
@@ -23,18 +24,22 @@ namespace SkyRemoval
         // Make the constructor private to prevent direct construction calls.
         private SkyRemovalModel(string modelPath, ExecutionEngine engine, int gpuId)
         {
+            Environment.SetEnvironmentVariable("CUDA_MODULE_LOADING", "LAZY");
 
+            
             if (engine != ExecutionEngine.Auto)
             {
                 var sessionOptions = engine switch
                 {
                     ExecutionEngine.CPU => CreateCpuSessionOptions(),
-                    ExecutionEngine.CUDA => CreateCudaSession(),
-                    ExecutionEngine.TensorRT => SessionOptions.MakeSessionOptionWithTensorrtProvider(),
-                    ExecutionEngine.DirectML => CreateDirectMl(),
+                    ExecutionEngine.CUDA => CreateCudaSessionOptions(),
+                    ExecutionEngine.TensorRT => CreateTensorRtOptions(),
+                    ExecutionEngine.DirectML => CreateDirectMlOptions(),
                     ExecutionEngine.Auto => throw new ArgumentOutOfRangeException(nameof(engine), engine, null),
                     _ => throw new ArgumentOutOfRangeException(nameof(engine), engine, null)
                 };
+
+                adjustCommonSessionSettings(sessionOptions);
 
                 _session = new InferenceSession(modelPath, sessionOptions);
             }
@@ -42,19 +47,31 @@ namespace SkyRemoval
             {
                 _session = CreateInferenceSession(
                     modelPath,
-                    () => CreateTensorRt(gpuId),
-                    () => CreateCudaSession(gpuId),
-                    () => CreateDirectMl(gpuId),
+                    () => CreateTensorRtOptions(gpuId),
+                    () => CreateCudaSessionOptions(gpuId),
+                    () => CreateDirectMlOptions(gpuId),
                     CreateCpuSessionOptions
                 );
-
             }
         }
 
-        private static InferenceSession CreateInferenceSession(string modelPath, params Func<SessionOptions>[] sessionOptionFactories)
+
+        private void adjustCommonSessionSettings(SessionOptions sessionOptions)
+        {
+            sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+            sessionOptions.ExecutionMode = ExecutionMode.ORT_PARALLEL;
+            sessionOptions.EnableMemoryPattern = true;
+        }
+
+        private InferenceSession CreateInferenceSession(string modelPath,
+            params Func<SessionOptions>[] sessionOptionFactories)
         {
             foreach (var sessionOptionFactory in sessionOptionFactories)
             {
+                var options = sessionOptionFactory();
+                adjustCommonSessionSettings(options);
+
+
                 try
                 {
                     var inferenceSession = new InferenceSession(modelPath, sessionOptionFactory());
@@ -69,9 +86,8 @@ namespace SkyRemoval
             throw new Exception("Failed to create an InferenceSession with any provider");
         }
 
-        private static SessionOptions CreateCudaSession(int gpuId = 0, int memoryLimitGb = 6)
+        private static SessionOptions CreateCudaSessionOptions(int gpuId = 0, int memoryLimitGb = 6)
         {
-
             var cudaProviderOptions = new OrtCUDAProviderOptions(); // Dispose this finally
 
             var providerOptionsDict = new Dictionary<string, string>
@@ -87,53 +103,58 @@ namespace SkyRemoval
 
             cudaProviderOptions.UpdateOptions(providerOptionsDict);
 
-            return SessionOptions.MakeSessionOptionWithCudaProvider(gpuId);
+
+            var options = new SessionOptions();
+            options.CheckCudaExecutionProviderDLLs();
+            options.AppendExecutionProvider_CUDA(cudaProviderOptions);
+
+            return options;
         }
 
 
         private static SessionOptions CreateCpuSessionOptions()
         {
             var sessionOptions = new SessionOptions();
-            sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
-            sessionOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
-            sessionOptions.EnableMemoryPattern = true;
 
 
             return sessionOptions;
         }
 
-        private static SessionOptions CreateTensorRt(int gpuId = 0)
+        private static SessionOptions CreateTensorRtOptions(int gpuId = 0)
         {
             var providerOptionsDict = new Dictionary<string, string>
             {
-                ["ORT_TENSORRT_MAX_WORKSPACE_SIZE"] = "4294967296",
-                ["ORT_TENSORRT_FP16_ENABLE"] = "1",
-                ["ORT_TENSORRT_ENGINE_CACHE_ENABLE"] = "1",
-                ["ORT_TENSORRT_BUILDER_OPTIMIZATION_LEVEL"] = "5",
-                ["ORT_TENSORRT_CONTEXT_MEMORY_SHARING_ENABLE"] = "1"
-
+                ["trt_max_workspace_size"] = "4294967296",
+                ["trt_fp16_enable"] = "1",
+                ["trt_force_sequential_engine_build"] = "1",
+                ["trt_engine_cache_enable"] = "1",
+                ["trt_context_memory_sharing_enable"] = "1",
+                ["trt_builder_optimization_level"] = "5",
+                ["trt_engine_cache_path"] = "trt_engine_cache",
 
             };
+            
+
+            var rtOptions = new OrtTensorRTProviderOptions();
+            rtOptions.UpdateOptions(providerOptionsDict);
 
 
+            var options = new SessionOptions();
+            options.CheckTensorrtExecutionProviderDLLs();
+            options.AppendExecutionProvider_Tensorrt(rtOptions);
 
-
-
-            var options = SessionOptions.MakeSessionOptionWithTensorrtProvider(gpuId);
-            options.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_FATAL;
             return options;
         }
 
-        private static SessionOptions CreateDirectMl(int gpuId = 0)
+        private static SessionOptions CreateDirectMlOptions(int gpuId = 0)
         {
             var sessionOptions = new SessionOptions();
-            sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
             sessionOptions.AppendExecutionProvider_DML(gpuId);
-
             return sessionOptions;
         }
 
-        public static async Task<SkyRemovalModel> CreateAsync(ExecutionEngine engine = ExecutionEngine.Auto, int gpuId = 0)
+        public static async Task<SkyRemovalModel> CreateAsync(ExecutionEngine engine = ExecutionEngine.Auto,
+            int gpuId = 0)
         {
             if (_instance != null)
                 return _instance;
@@ -173,6 +194,7 @@ namespace SkyRemoval
 
             return ProcessModelResults(image, output);
         }
+
         public Image<Rgb24> ProcessModelResults(Image originalImage, Tensor<float> outputTensor)
         {
             var height = outputTensor.Dimensions[2];
@@ -224,6 +246,7 @@ namespace SkyRemoval
             });
             return processedImage;
         }
+
         public DenseTensor<float> PrepareImage(Image image)
         {
             var processingImage = image.CloneAs<Rgb24>();
@@ -237,7 +260,6 @@ namespace SkyRemoval
                     Mode = ResizeMode.Stretch,
                     Sampler = KnownResamplers.Box
                 });
-
             });
 
             var ndArray = ImageToNdArray(processingImage);
@@ -246,9 +268,9 @@ namespace SkyRemoval
 
             return NdArrayToDenseTensor(npImg);
         }
+
         private static void Clip(Span<Vector4> pixelRow, float min = 0, float max = 1)
         {
-
             foreach (ref var pixel in pixelRow)
             {
                 pixel.X = Math.Clamp(pixel.X, min, max);
@@ -266,7 +288,6 @@ namespace SkyRemoval
                 pixel /= 255.0f; // Convert from [0,255] to [0,1]
             }
         }
-
 
 
         private static NDArray TransposeExpandNdArray(NDArray npImg)
@@ -311,7 +332,6 @@ namespace SkyRemoval
         }
 
 
-
         private static NDArray ImageToNdArray(Image<Rgb24> image)
         {
             var height = image.Height;
@@ -337,7 +357,8 @@ namespace SkyRemoval
         {
             if (ndArray.ndim != 3 || ndArray.shape[2] < 3)
             {
-                throw new ArgumentException("Invalid NDArray shape. Expecting a 3D array with at least 3 channels in the third dimension.");
+                throw new ArgumentException(
+                    "Invalid NDArray shape. Expecting a 3D array with at least 3 channels in the third dimension.");
             }
 
             var height = ndArray.shape[0];
