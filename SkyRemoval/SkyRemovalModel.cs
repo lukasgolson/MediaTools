@@ -126,10 +126,12 @@ namespace SkyRemoval
             {
                 ["trt_max_workspace_size"] = "4294967296",
                 ["trt_fp16_enable"] = "1",
+                ["trt_force_sequential_engine_build"] = "1",
                 ["trt_engine_cache_enable"] = "1",
                 ["trt_context_memory_sharing_enable"] = "1",
                 ["trt_builder_optimization_level"] = "5",
                 ["trt_engine_cache_path"] = "trt_engine_cache",
+
             };
             
 
