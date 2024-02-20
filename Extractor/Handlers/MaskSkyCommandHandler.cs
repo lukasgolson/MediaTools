@@ -41,7 +41,7 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
                 
                 
                 
-                foreach (var gpu in Enumerable.Range(0, arguments.GpuCount))
+                foreach (var gpu in Enumerable.Range(0, arguments.ProcessorCount))
                 {
                     _models.Add(await SkyRemovalModel.CreateAsync(arguments.Engine, gpu));
                 }

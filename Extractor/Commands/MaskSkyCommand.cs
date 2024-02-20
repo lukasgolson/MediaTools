@@ -18,7 +18,7 @@ public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskS
             CommandOptions.InputOption,
             CommandOptions.OutputOption,
             CommandOptions.EngineOption,
-            CommandOptions.GpuCountOption
+            CommandOptions.ProcessorCountOption
         })
     {
     }
@@ -28,7 +28,7 @@ public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskS
         string OutputPath,
         PathType InputType,
         ExecutionEngine Engine,
-        int GpuCount) : IParsedCommandArguments;
+        int ProcessorCount) : IParsedCommandArguments;
 
 
     public class Parser : ICommandArgumentParser<MaskSkyArguments>
@@ -40,8 +40,21 @@ public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskS
                                Path.GetFileNameWithoutExtension(inputPath) + "_mask";
             var engine = arguments.GetArgumentOrNull(CommandOptions.EngineLabel)
                 ?.ExpectedAsEnumValue<ExecutionEngine>();
-            var gpuCount = arguments.GetArgumentOrNull(CommandOptions.GPUCount)?.ExpectedAsSingleValue() ?? "1";
-
+            var processorCount = arguments.GetArgumentOrNull(CommandOptions.GPUCount)?.ExpectedAsSingleValue() ?? "1";
+            
+            if (int.TryParse(processorCount, out var count))
+            {
+                if (count < 1)
+                {
+                    throw new MessageOnlyException("Processor count must be at least 1.");
+                }
+            }
+            else
+            {
+                throw new MessageOnlyException("Processor count must be an integer.");
+            }
+            
+          
 
             var inputDirectory = PathType.None;
 
@@ -66,7 +79,7 @@ public class MaskSkyCommand : LeafCommand<MaskSkyCommand.MaskSkyArguments, MaskS
                 outputFolder,
                 inputDirectory,
                 engine ?? ExecutionEngine.Auto,
-                int.Parse(gpuCount)
+                int.Parse(processorCount)
             );
 
 

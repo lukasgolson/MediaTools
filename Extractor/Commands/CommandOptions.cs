@@ -71,7 +71,7 @@ public static class CommandOptions
         "The engine to use for processing. Default: cpu. Options: cpu, cuda, tensor-rt, directml, auto"
     });
     
-    public static readonly CommandOption GpuCountOption = new(GPUCount, new[]
+    public static readonly CommandOption ProcessorCountOption = new(GPUCount, new[]
     {
         "The number of GPUs to use. Default: 1"
     });
