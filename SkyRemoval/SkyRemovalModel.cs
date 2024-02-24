@@ -144,8 +144,6 @@ namespace SkyRemoval
                 ["trt_engine_cache_path"] = "trt_engine_cache",
 
                 ["device_id"] = gpuId.ToString(),
-                ["gpu_mem_limit"] = (memoryLimitGb * 1024 * 1024 * 1024).ToString()
-
             };
             
 
