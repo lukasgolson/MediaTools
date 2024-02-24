@@ -189,18 +189,8 @@ public class MaskSkyCommandHandler : ILeafCommandHandler<MaskSkyCommand.MaskSkyA
 
                 foreach (var frame in frameList)
                 {
-
-                    while (true)
-                    {
-                        var memory = GC.GetTotalMemory(forceFullCollection: false); // Returns the current memory usage in bytes
-
-                        if ((maxMemory - memory) >= 30000000) // Checks if there's at least 300 MB free within your set limit
-                        {
-                            await inputBufferBlock.SendAsync(frame);
-                            break; // Once the SendAsync is executed, break from the while loop
-                        }
-                        Thread.Sleep(5000); // If there's not enough memory, wait for a bit before checking again
-                    }
+                    
+                    await inputBufferBlock.SendAsync(frame);
                 }
 
                 inputBufferBlock.Complete();
