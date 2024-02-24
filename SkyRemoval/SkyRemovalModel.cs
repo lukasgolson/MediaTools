@@ -86,6 +86,7 @@ namespace SkyRemoval
         {
             sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
             sessionOptions.ExecutionMode = ExecutionMode.ORT_PARALLEL;
+            sessionOptions.EnableCpuMemArena = true;
             sessionOptions.EnableMemoryPattern = true;
         }
 
@@ -101,7 +102,7 @@ namespace SkyRemoval
                 ["cudnn_conv_use_max_workspace"] = "1",
                 ["cudnn_conv1d_pad_to_nc1d"] = "1",
                 ["device_id"] = gpuId.ToString(),
-                ["gpu_mem_limit"] = (memoryLimitGb * 1024 * 1024 * 1024).ToString()
+                // ["gpu_mem_limit"] = (memoryLimitGb * 1024 * 1024 * 1024).ToString()
             };
 
 
