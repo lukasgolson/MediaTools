@@ -32,14 +32,16 @@ namespace SkyRemoval
                 var sessionOptions = engine switch
                 {
                     ExecutionEngine.CPU => CreateCpuSessionOptions(),
-                    ExecutionEngine.CUDA => CreateCudaSessionOptions(),
-                    ExecutionEngine.TensorRT => CreateTensorRtOptions(),
-                    ExecutionEngine.DirectML => CreateDirectMlOptions(),
+
+                    ExecutionEngine.CUDA => CreateCudaSessionOptions(gpuId),
+                    ExecutionEngine.TensorRT => CreateTensorRtOptions(gpuId),
+                    ExecutionEngine.DirectML => CreateDirectMlOptions(gpuId),
+
                     ExecutionEngine.Auto => throw new ArgumentOutOfRangeException(nameof(engine), engine, null),
                     _ => throw new ArgumentOutOfRangeException(nameof(engine), engine, null)
                 };
 
-                adjustCommonSessionSettings(sessionOptions);
+                AdjustCommonSessionSettings(sessionOptions);
 
                 _session = new InferenceSession(modelPath, sessionOptions);
             }
@@ -56,7 +58,9 @@ namespace SkyRemoval
         }
 
 
-        private void adjustCommonSessionSettings(SessionOptions sessionOptions)
+
+
+        private void AdjustCommonSessionSettings(SessionOptions sessionOptions)
         {
             sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
             sessionOptions.ExecutionMode = ExecutionMode.ORT_PARALLEL;
@@ -69,7 +73,9 @@ namespace SkyRemoval
             foreach (var sessionOptionFactory in sessionOptionFactories)
             {
                 var options = sessionOptionFactory();
-                adjustCommonSessionSettings(options);
+
+                AdjustCommonSessionSettings(options);
+                
 
 
                 try
@@ -86,18 +92,21 @@ namespace SkyRemoval
             throw new Exception("Failed to create an InferenceSession with any provider");
         }
 
+
+
+
         private static SessionOptions CreateCudaSessionOptions(int gpuId = 0, int memoryLimitGb = 6)
         {
             var cudaProviderOptions = new OrtCUDAProviderOptions(); // Dispose this finally
-
+            
             var providerOptionsDict = new Dictionary<string, string>
             {
-                ["gpu_mem_limit"] = "4294967296",
                 ["arena_extend_strategy"] = "kSameAsRequested",
                 ["cudnn_conv_algo_search"] = "EXHAUSTIVE",
                 ["do_copy_in_default_stream"] = "1",
                 ["cudnn_conv_use_max_workspace"] = "1",
-                ["cudnn_conv1d_pad_to_nc1d"] = "1"
+                ["cudnn_conv1d_pad_to_nc1d"] = "1",
+                ["device_id"] = gpuId.ToString(),
             };
 
 
@@ -120,16 +129,21 @@ namespace SkyRemoval
             return sessionOptions;
         }
 
-        private static SessionOptions CreateTensorRtOptions(int gpuId = 0)
+
+        private static SessionOptions CreateTensorRtOptions(int gpuId = 0, int memoryLimitGb = 6)
+
         {
             var providerOptionsDict = new Dictionary<string, string>
             {
                 ["trt_max_workspace_size"] = "4294967296",
                 ["trt_fp16_enable"] = "1",
+                ["trt_force_sequential_engine_build"] = "1",
                 ["trt_engine_cache_enable"] = "1",
                 ["trt_context_memory_sharing_enable"] = "1",
                 ["trt_builder_optimization_level"] = "5",
                 ["trt_engine_cache_path"] = "trt_engine_cache",
+
+                ["device_id"] = gpuId.ToString(),
             };
             
 
@@ -314,6 +328,7 @@ namespace SkyRemoval
             {
                 NamedOnnxValue.CreateFromTensor(inputName, tensor)
             });
+            
 
             var outputTensor = onnxOutput.First().AsTensor<float>().Clone();
 
