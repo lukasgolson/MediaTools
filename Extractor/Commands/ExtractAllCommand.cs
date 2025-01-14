@@ -6,20 +6,18 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.ExtractAllArgumen
 {
     public ExtractAllCommand() : base(
         "extract",
-        new[]
-        {
-            "extracts all frames from the input video file."
-        },
+        [
+            "Extracts all frames from the input video file."
+        ],
         new[]
         {
             CommandOptions.InputFileOption,
             CommandOptions.OutputDirOption,
             CommandOptions.MaskOutputOption,
             CommandOptions.OutputFormatOption,
-            new CommandOption(CommandOptions.OutputFrameDropRatioLabel, new[]
-            {
+            new CommandOption(CommandOptions.OutputFrameDropRatioLabel, [
                 "The ratio of frames to drop from the output. (e.g., 0 = no drop, 0.5 = half, 1 = all). Default: 0"
-            }),
+            ]),
             CommandOptions.OutputFrameRate,
             CommandOptions.Mask
         })

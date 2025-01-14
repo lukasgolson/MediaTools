@@ -194,18 +194,33 @@ public static class Program
 
     private static Command CreateCommandTreeRoot()
     {
+        
+        var gifs_branch = new BranchCommandBuilder("gifs")
+            .WithDesription([
+                "Command toolkit for working with GIFs."
+            ])
+            .WithChildCommand(new AnimateCommand())
+            .Build();
+        
+        var gdi_branch = new BranchCommandBuilder("gdi")
+            .WithDesription([
+                "Command toolkit for working and working around GDI+."
+            ])
+            .Build();
+        
         return new BranchCommandBuilder("")
-            .WithDesription(new[]
-            {
+            .WithDesription([
                 "IRSS Media Tools is a command-line tool for extracting, converting, and working with media files.",
                 "Unless otherwise stated, all commands will use the current working directory as the input/output folder."
-            })
+            ])
+            .WithChildCommand(gifs_branch)
+            .WithChildCommand(gdi_branch)
             .WithChildCommand(new ExtractAllCommand())
             .WithChildCommand(new ListInformationCommand())
             .WithChildCommand(new ConvertCommand())
-            .WithChildCommand(new AnimateCommand())
             .WithChildCommand(new MaskSkyCommand())
             .WithChildCommand(new NormalizeLuminanceCommand())
+            
             .Build();
     }
 
