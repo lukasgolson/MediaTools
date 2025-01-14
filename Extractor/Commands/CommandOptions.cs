@@ -40,6 +40,8 @@ public static class CommandOptions
     
     public const string OptimalGammaCorrectionLabel = "--optimal-gamma-correction";
     
+    public const string StackTraceLabel = "--stack-trace";
+    
 
     public static readonly CommandOption InputFileOption = new(InputLabel, new[]
     {
@@ -144,5 +146,10 @@ public static class CommandOptions
     public static CommandOption OptimalGammaCorrectionOption = new(OptimalGammaCorrectionLabel, new[]
     {
         "Whether or not to use optimal gamma correction proposed by Inho Jeong & Chul Lee (2021). See Readme.md reference [1]. Default: false"
+    });
+
+    public static CommandOption StackTraceOption = new(StackTraceLabel, new[]
+    {
+        "Whether or not to display the stack trace. Default: false"
     });
 }

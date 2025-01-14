@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using Extractor.Commands;
+using Extractor.Commands.GDI;
 using Extractor.Extensions;
 using Extractor.Patches;
 using FFMediaToolkit;
@@ -206,6 +207,7 @@ public static class Program
             .WithDesription([
                 "Command toolkit for working and working around GDI+."
             ])
+            .WithChildCommand(new GdiValidateCommand())
             .Build();
         
         return new BranchCommandBuilder("")

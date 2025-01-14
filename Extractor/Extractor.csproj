@@ -109,8 +109,4 @@
       <ProjectReference Include="..\SkyRemoval\SkyRemoval.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Commands\GDI\" />
-    </ItemGroup>
-
 </Project>
