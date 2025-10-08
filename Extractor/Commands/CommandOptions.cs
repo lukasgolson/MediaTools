@@ -3,6 +3,9 @@ namespace Extractor.Commands;
 
 public static class CommandOptions
 {
+    public const string InputDjisrtLabel = "--SRT";
+    public const string OutputSpatialFileLabel = "--SOUT";
+
     public const string InputLabel = "--input";
     public const string OutputLabel = "--output";
     
@@ -65,6 +68,10 @@ public static class CommandOptions
     {
         "The input image file format (e.g., .png or .jpg). Default: jpg"
     });
+
+    public static readonly CommandOption InputDJISRTOption = new(InputDjisrtLabel, new[] { "Whether or not to look for the SRT files in the same folder as the video to map output frames to positional information" });
+
+    public static readonly CommandOption OutputSpatialFileOption = new(OutputSpatialFileLabel, new []{"The name of the file to output the spatial mapping to."});
 
     public static readonly CommandOption OutputFormatOption = new(OutputFormatLabel, new[]
     {

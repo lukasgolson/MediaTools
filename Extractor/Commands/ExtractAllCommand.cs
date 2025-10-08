@@ -1,38 +1,46 @@
 ﻿using Extractor.Handlers;
 using TreeBasedCli;
+using static System.Boolean;
+
 namespace Extractor.Commands;
 
 public class ExtractAllCommand : LeafCommand<ExtractAllCommand.ExtractAllArguments, ExtractAllCommand.Parser, ExtractAllCommandHandler>
 {
     public ExtractAllCommand() : base(
         "extract",
-        new[]
-        {
+        [
             "extracts all frames from the input video file."
-        },
-        new[]
-        {
+        ],
+        [
             CommandOptions.InputFileOption,
+            CommandOptions.InputDJISRTOption,
             CommandOptions.OutputDirOption,
+            CommandOptions.OutputSpatialFileOption,
             CommandOptions.MaskOutputOption,
             CommandOptions.OutputFormatOption,
-            new CommandOption(CommandOptions.OutputFrameDropRatioLabel, new[]
-            {
+            new CommandOption(CommandOptions.OutputFrameDropRatioLabel, [
                 "The ratio of frames to drop from the output. (e.g., 0 = no drop, 0.5 = half, 1 = all). Default: 0"
-            }),
+            ]),
             CommandOptions.OutputFrameRate,
             CommandOptions.Mask
-        })
+        ])
     {
     }
 
-    public record ExtractAllArguments(string InputFile, string FramesOutputFolder, string MasksOutputFolder, string OutputFormat, float DropRatio, int? FrameRate, ImageMaskGeneration ImageMaskGeneration) : IParsedCommandArguments;
+    public record ExtractAllArguments(string InputFile, string FramesOutputFolder, string MasksOutputFolder, 
+        string OutputFormat, float DropRatio, int? FrameRate, 
+        ImageMaskGeneration ImageMaskGeneration, bool ExtractGeoSpatial) : IParsedCommandArguments;
 
     public class Parser : ICommandArgumentParser<ExtractAllArguments>
     {
         public IParseResult<ExtractAllArguments> Parse(CommandArguments arguments)
         {
             var inputFile = arguments.GetArgument(CommandOptions.InputLabel).ExpectedAsSinglePathToExistingFile();
+
+            var InputDJISRTString = arguments.GetArgumentOrNull(CommandOptions.InputDjisrtLabel)?.ExpectedAsSingleValue() ?? "false";
+            
+            var outputSpatialFileOption = arguments.GetArgumentOrNull(CommandOptions.OutputSpatialFileLabel)?.ExpectedAsSingleValue() ?? "ouput.json";
+            
             var framesOutputFolder = arguments.GetArgumentOrNull(CommandOptions.OutputLabel)?.ExpectedAsSingleValue() ?? Path.GetFileNameWithoutExtension(inputFile);
             var masksOutputFolder = arguments.GetArgumentOrNull(CommandOptions.MaskOutputLabel)?.ExpectedAsSingleValue() ?? framesOutputFolder + "_mask";
             var outputFormat = (arguments.GetArgumentOrNull(CommandOptions.OutputFormatLabel)?.ExpectedAsSingleValue() ?? "jpg").ToLowerInvariant().Replace(".", "", StringComparison.InvariantCultureIgnoreCase);
@@ -67,6 +75,13 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.ExtractAllArgumen
                 return new FailedParseResult<ExtractAllArguments>($"Invalid mask. Valid masks are: {validMaskText.TrimEnd(' ')} or a combination of them (e.g., \"{maskNames[1]} {maskNames.Last()}\").");
             }
 
+
+            var InputDJI = false;
+
+            var parse = TryParse(InputDJISRTString, out InputDJI);
+            
+
+
             float dropRatio;
 
             if (float.TryParse(dropRatioString, out var parseResult))
@@ -94,7 +109,8 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.ExtractAllArgumen
                 outputFormat,
                 Math.Abs(dropRatio),
                 fps,
-                imageMaskGeneration
+                imageMaskGeneration,
+                InputDJI
             );
 
             return new SuccessfulParseResult<ExtractAllArguments>(result);
