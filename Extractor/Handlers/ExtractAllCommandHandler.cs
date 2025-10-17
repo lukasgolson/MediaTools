@@ -31,14 +31,14 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
                 var checkArgumentsProgressTask = ctx.AddTask("[green]Validating Command Arguments[/]", true, 2);
                 var setupDependenciesProgressTask = ctx.AddTask("[green]Setting up Dependencies[/]", true, 2);
                 var infoProgressTask = ctx.AddTask("[green]Analysing Media File[/]", true, 2);
-                var framesProgressTask = ctx.AddTask("[green]Extracting Frames[/]");
-
 
                 ProgressTask? extractGeospatialTask = null;
                 if (extractAllArguments.ExtractGeoSpatial)
                 {
                     extractGeospatialTask = ctx.AddTask("[green]Extracting Geospatial Information[/]");
                 }
+
+                var framesProgressTask = ctx.AddTask("[green]Extracting Frames[/]");
 
 
                 ProgressTask? maskProgressTask = null;
@@ -61,17 +61,14 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
                     $"Extracting {finalFrameCount} frames from {extractAllArguments.InputFile} to {extractAllArguments.FramesOutputFolder}.");
 
 
-
                 Dictionary<int, DjiTelemetryData>? djiTelemetryDatas = null;
                 if (extractAllArguments.ExtractGeoSpatial)
                 {
                     djiTelemetryDatas = (await ExtractCoordinates(extractAllArguments, extractGeospatialTask))
                         .ToDictionary(x => x.FrameCount, x => x);
-
                 }
-           
-                
-                
+
+
                 await ExtractFrames(extractAllArguments, djiTelemetryDatas, framesProgressTask, maskProgressTask);
             });
 
@@ -91,9 +88,9 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
         var fileContents = await File.ReadAllTextAsync(geospatialInfoPath);
 
         var records = SrtParser.Parse(fileContents);
-        
+
         extractGeospatialTask.StopTask();
-       
+
 
         return records;
     }
@@ -160,6 +157,26 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
 
         return (int)finalFrameCount;
     }
+    
+    private static DjiTelemetryData? MatchTelemetryByTime(
+        TimeSpan frameTimestamp,
+        List<DjiTelemetryData> telemetryData)
+    {
+        // 1. Exact containment match
+        var record = telemetryData
+            .OrderBy(t => Math.Abs(((t.StartTime + (t.EndTime - t.StartTime) / 2) - frameTimestamp).TotalMilliseconds))
+            .FirstOrDefault();
+
+
+        if (record != null)
+            return record;
+
+        // 2. Otherwise, find the closest record (fallback)
+        return telemetryData
+            .OrderBy(t => Math.Abs((t.StartTime + (t.EndTime - t.StartTime) / 2 - frameTimestamp).TotalMilliseconds))
+            .FirstOrDefault();
+    }
+
 
 
     private async Task ExtractFrames(ExtractAllCommand.ExtractAllArguments extractAllArguments,
@@ -167,64 +184,94 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
         ProgressTask? maskProgress)
     {
         var file = MediaFile.Open(extractAllArguments.InputFile);
-        var tasks = new List<Task>();
-
         var skyMask = extractAllArguments.ImageMaskGeneration.HasFlag(ExtractAllCommand.ImageMaskGeneration.Sky);
+
+
+        var processingTasks = new List<Task>();
+        using var concurrencySemaphore = new SemaphoreSlim(Environment.ProcessorCount);
 
         ulong frameIndex = 0;
         foreach (var frame in file.GetFrames(extractAllArguments.DropRatio))
         {
+            await concurrencySemaphore.WaitAsync();
+
             var imageName = $"{Path.GetFileNameWithoutExtension(extractAllArguments.InputFile)}_{frameIndex + 1}";
 
-            tasks.Add(Task.Run(async () =>
+
+            processingTasks.Add(Task.Run(async () =>
             {
-                var index_id = frameIndex;
-                
-                var frameOutput = Path.Join(extractAllArguments.FramesOutputFolder,
-                    $"{imageName}.{extractAllArguments.OutputFormat}");
-
-                await frame.SaveAsync(frameOutput);
-                
-                var geospatialData = djiTelemetryDatas.GetValueOrDefault((int) index_id + 1);
-
-                
-                if (geospatialData != null)
+                try
                 {
-                 
-                    var t = await ImageFile.FromFileAsync(frameOutput);
-                
-                    t?.Properties.Set(ExifTag.GPSAltitude, geospatialData.AbsoluteAltitude );
-                    
-                
-                    await t.SaveAsync(frameOutput);   
-                }
-                
+                    var frameOutput = Path.Join(extractAllArguments.FramesOutputFolder,
+                        $"{imageName}.{extractAllArguments.OutputFormat}");
 
-                
-                
-                
-                progress.Increment(1);
+                    await frame.Bitmap.SaveAsync(frameOutput);
+
+
+                    if (djiTelemetryDatas is { Count: > 0 })
+                    {
+
+                        var telemetryList = djiTelemetryDatas.Values.ToList();
+                        var matched = MatchTelemetryByTime(frame.Timestamp, telemetryList);
+
+                        if (matched != null)
+                        {
+
+                            var t = await ImageFile.FromFileAsync(frameOutput);
+
+                            t?.Properties.Set(ExifTag.GPSAltitude,
+                                MathF.Round((float)matched.AbsoluteAltitude, 1));
+
+
+                            if (matched.Latitude != 0)
+                            {
+                                var latitude = CoordinateConverter.DecimalToDms(matched.Latitude, false);
+
+                                t?.Properties.Set(ExifTag.GPSLatitude, latitude.degree, latitude.minute,
+                                    MathF.Round(latitude.second, 5));
+                                t?.Properties.Set(ExifTag.GPSLatitudeRef, latitude.direction);
+                            }
+
+
+                            if (matched.Longitude != 0)
+                            {
+                                var longitude = CoordinateConverter.DecimalToDms(matched.Longitude, true);
+
+                                //t.Properties.Set(ExifTag.GPSLongitude, longitude);
+                                t.Properties.Set(ExifTag.GPSLongitude, longitude.degree, longitude.minute,
+                                    MathF.Round(longitude.second, 5));
+                                t.Properties.Set(ExifTag.GPSLongitudeRef, longitude.direction);
+                            }
+
+
+                            await t.SaveAsync(frameOutput);
+                        }
+                    }
+
+
+                    progress.Increment(1);
+
+                    if (skyMask && _skyRemovalModel != null)
+                    {
+                        var maskOutput = Path.Join(extractAllArguments.MasksOutputFolder,
+                            $"{imageName}_mask.{extractAllArguments.OutputFormat}");
+                        // It's good practice to dispose the cloned frame and the mask
+                        using var clonedFrame = frame.Bitmap.CloneAs<Rgb24>();
+                        using var mask = _skyRemovalModel.Run(clonedFrame);
+                        await mask.SaveAsync(maskOutput).ConfigureAwait(false);
+                        maskProgress?.Increment(1);
+                    }
+                }
+                finally
+                {
+                    concurrencySemaphore.Release();
+                }
             }));
 
-            tasks.Add(Task.Run(async () =>
-            {
-                if (skyMask && _skyRemovalModel != null)
-                {
-                    var maskOutput = Path.Join(extractAllArguments.MasksOutputFolder,
-                        $"{imageName}_mask.{extractAllArguments.OutputFormat}");
-
-                    var mask = _skyRemovalModel.Run(frame.CloneAs<Rgb24>());
-
-                    await mask.SaveAsync(maskOutput).ConfigureAwait(false);
-
-                    maskProgress?.Increment(1);
-                }
-            }));
-
-            frameIndex++;
+            frameIndex += (ulong)(1 / (1 - extractAllArguments.DropRatio));
         }
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(processingTasks);
 
         progress.Description("[green]Extracting Frames[/]").Complete();
     }

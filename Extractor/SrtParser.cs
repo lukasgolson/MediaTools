@@ -15,22 +15,27 @@ public partial class SrtParser
 
         // This single regex pattern captures all required fields from each SRT block.
         // It uses named capture groups for easy access.
-        var pattern = DjiSrtRegex();
-        
+        var pattern = SubtitleMetadataRegex();
         var matches = pattern.Matches(srtContent);
 
+        const string timeFormat = @"hh\:mm\:ss\,fff";
+        
         foreach (Match match in matches)
         {
             try
             {
                 var telemetryData = new DjiTelemetryData
                 {
+                    StartTime = TimeSpan.ParseExact(match.Groups["startTime"].Value, timeFormat, CultureInfo.InvariantCulture),
+                    EndTime = TimeSpan.ParseExact(match.Groups["endTime"].Value, timeFormat, CultureInfo.InvariantCulture),
+                    
                     // Use InvariantCulture to ensure '.' is treated as the decimal separator
                     FrameCount = int.Parse(match.Groups["frame"].Value),
                     DiffTime = int.Parse(match.Groups["diff"].Value),
                     ISO = int.Parse(match.Groups["iso"].Value),
                     Shutter = match.Groups["shutter"].Value,
                     FNum = double.Parse(match.Groups["fnum"].Value, CultureInfo.InvariantCulture),
+                    F_length = double.Parse(match.Groups["focal_len"].Value, CultureInfo.InvariantCulture),
                     Latitude = double.Parse(match.Groups["lat"].Value, CultureInfo.InvariantCulture),
                     Longitude = double.Parse(match.Groups["lon"].Value, CultureInfo.InvariantCulture),
                     RelativeAltitude = double.Parse(match.Groups["rel_alt"].Value, CultureInfo.InvariantCulture),
@@ -48,6 +53,15 @@ public partial class SrtParser
         return telemetryList;
     }
 
-    [GeneratedRegex("FrameCnt: (?<frame>\\d+), DiffTime: (?<diff>\\d+)ms.*?\\[iso: (?<iso>\\d+)\\] \\[shutter: (?<shutter>[\\d\\./]+)\\] \\[fnum: (?<fnum>[\\d\\.]+)\\].*?\\[latitude: (?<lat>[\\d\\.-]+)\\] \\[longitude: (?<lon>[\\d\\.-]+)\\].*?\\[rel_alt: (?<rel_alt>[\\d\\.-]+) abs_alt: (?<abs_alt>[\\d\\.-]+)\\]", RegexOptions.Singleline)]
-    private static partial Regex DjiSrtRegex();
+    
+    [GeneratedRegex(
+        "(?<startTime>\\d{2}:\\d{2}:\\d{2},\\d{3}) --> (?<endTime>\\d{2}:\\d{2}:\\d{2},\\d{3}).*?" + 
+        "FrameCnt: (?<frame>\\d+), DiffTime: (?<diff>\\d+)ms.*?" + 
+        "\\[iso: (?<iso>\\d+)\\] \\[shutter: (?<shutter>[\\d\\./]+)\\] \\[fnum: (?<fnum>[\\d\\.]+)\\].*?" + 
+        "\\[focal_len: (?<focal_len>[\\d\\.]+)\\].*?" + 
+        "\\[latitude: (?<lat>[\\d\\.-]+)\\] \\[longitude: (?<lon>[\\d\\.-]+)\\].*?" + 
+        "\\[rel_alt: (?<rel_alt>[\\d\\.-]+) abs_alt: (?<abs_alt>[\\d\\.-]+)\\]", 
+        RegexOptions.Singleline
+    )]
+    private static partial Regex SubtitleMetadataRegex();
 }
