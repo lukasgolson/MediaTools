@@ -157,7 +157,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
 
         return (int)finalFrameCount;
     }
-    
+
     private static DjiTelemetryData? MatchTelemetryByTime(
         TimeSpan frameTimestamp,
         List<DjiTelemetryData> telemetryData)
@@ -178,7 +178,6 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
     }
 
 
-
     private async Task ExtractFrames(ExtractAllCommand.ExtractAllArguments extractAllArguments,
         Dictionary<int, DjiTelemetryData>? djiTelemetryDatas, ProgressTask progress,
         ProgressTask? maskProgress)
@@ -188,7 +187,7 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
 
 
         var processingTasks = new List<Task>();
-        using var concurrencySemaphore = new SemaphoreSlim(Environment.ProcessorCount);
+        using var concurrencySemaphore = new SemaphoreSlim(extractAllArguments.cpuCount);
 
         ulong frameIndex = 0;
         foreach (var frame in file.GetFrames(extractAllArguments.DropRatio))
@@ -210,13 +209,11 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
 
                     if (djiTelemetryDatas is { Count: > 0 })
                     {
-
                         var telemetryList = djiTelemetryDatas.Values.ToList();
                         var matched = MatchTelemetryByTime(frame.Timestamp, telemetryList);
 
                         if (matched != null)
                         {
-
                             var t = await ImageFile.FromFileAsync(frameOutput);
 
                             t?.Properties.Set(ExifTag.GPSAltitude,
@@ -268,7 +265,8 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
                 }
             }));
 
-            frameIndex += (ulong)(1 / (1 - extractAllArguments.DropRatio));
+            //frameIndex += (ulong)(1 / (1 - extractAllArguments.DropRatio));
+            frameIndex += 1;
         }
 
         await Task.WhenAll(processingTasks);
