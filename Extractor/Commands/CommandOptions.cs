@@ -103,6 +103,7 @@ public static class CommandOptions
         "The output length for square resolutions. Defaults to 128."
     });
 
+
     public static readonly CommandOption StartPosition = new(videoStartPositionLabel,
         new[] { "The start position of the video segment in seconds. Defaults to the beginning of the video." });
 
