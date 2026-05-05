@@ -14,7 +14,7 @@
         <Company>IRSS</Company>
         <AssemblyVersion>0.4.1.0</AssemblyVersion>
         <NeutralLanguage>en</NeutralLanguage>
-        <LangVersion>preview</LangVersion>
+        <LangVersion>latest</LangVersion>
         <Product>IRSS Media Tools</Product>
     </PropertyGroup>
 
