@@ -46,6 +46,9 @@ public static class CommandOptions
 
     public const string OptimalGammaCorrectionLabel = "--optimal-gamma-correction";
 
+    public const string videoStartPositionLabel = "--start";
+    public const string videoEndPositionLabel = "--end";
+
 
     public static readonly CommandOption InputFileOption = new(InputLabel, new[]
     {
@@ -99,6 +102,12 @@ public static class CommandOptions
     {
         "The output length for square resolutions. Defaults to 128."
     });
+
+    public static readonly CommandOption StartPosition = new(videoStartPositionLabel,
+        new[] { "The start position of the video segment in seconds. Defaults to the beginning of the video." });
+
+    public static readonly CommandOption EndPosition = new(videoEndPositionLabel,
+        new[] { "The end position of the video segment in seconds. Defaults to the end of the video." });
 
     public static readonly CommandOption Mask = new(MaskLabel, new[]
     {

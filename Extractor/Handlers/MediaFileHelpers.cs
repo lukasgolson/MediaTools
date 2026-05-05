@@ -8,96 +8,100 @@ namespace Extractor.Handlers;
 
 public static class MediaFileHelpers
 {
-    public static void PrintFileInfo(this MediaFile file)
+    public readonly struct TimestampedFrame(Image bitmap, TimeSpan timestamp) : IDisposable
     {
-
-        var info = file.Video.Info;
-
-        AnsiConsole.Write(new TextPath(file.Info.FilePath));
-
-        AnsiConsole.WriteLine(Resources.Resources.InfoLine1, info.NumberOfFrames ?? 0, info.FrameSize, info.IsVariableFrameRate, info.AvgFrameRate);
-        AnsiConsole.WriteLine(Resources.Resources.InfoLine2, info.Rotation, info.IsInterlaced, info.PixelFormat, info.Duration, info.CodecName);
-
-
-        AnsiConsole.Write(Resources.Resources.MetadataHeader);
-        foreach (var pair in info.Metadata)
-        {
-            AnsiConsole.Write(Resources.Resources.MetadataPair, pair.Key, pair.Value);
-            AnsiConsole.Write(@" ");
-        }
-    }
-    
-
-    public readonly struct TimestampedFrame : IDisposable
-    {
-        public Image Bitmap { get; }
-        public TimeSpan Timestamp { get; }
-
-        public TimestampedFrame(Image bitmap, TimeSpan timestamp)
-        {
-            Bitmap = bitmap;
-            Timestamp = timestamp;
-        }
+        public Image Bitmap { get; } = bitmap;
+        public TimeSpan Timestamp { get; } = timestamp;
 
         public void Dispose() => Bitmap.Dispose();
     }
 
-    public static IEnumerable<Image> GetFramesOld(this MediaFile mediaFile, float dropRatio)
+    extension(MediaFile mediaFile)
     {
-        switch (dropRatio)
+        public IEnumerable<Image> GetFramesOld(float dropRatio)
         {
-            case < 0 or > 1:
-                throw new ArgumentException(Resources.Resources.DropRatioRequirements, nameof(dropRatio));
-            case >= 1:
+            switch (dropRatio)
+            {
+                case < 0 or > 1:
+                    throw new ArgumentException(Resources.Resources.DropRatioRequirements, nameof(dropRatio));
+                case >= 1:
+                    yield break;
+            }
+
+            var keepFrameNumber = dropRatio > 0 ? 1 / (1 - dropRatio) : 1;
+
+            uint frameCounter = 0;
+            while (mediaFile.Video.TryGetNextFrame(out var imageData))
+            {
+                frameCounter++;
+
+                if (dropRatio < 1 && frameCounter % (int)keepFrameNumber != 0)
+                    continue;
+
+                yield return imageData.ToBitmap();
+            }
+        }
+
+        public IEnumerable<TimestampedFrame> GetFrames(float targetFps,
+            double startSeconds = 0, double? stopSeconds = null)
+        {
+            var videoInfo = mediaFile.Video.Info;
+           
+
+            if (startSeconds < 0)
+                throw new ArgumentException("Start position must be zero or greater.", nameof(startSeconds));
+
+            if (stopSeconds <= startSeconds)
+                throw new ArgumentException("End position must be strictly greater than start position.",
+                    nameof(stopSeconds));
+
+            
+
+            var targetInterval = TimeSpan.FromSeconds(1.0 / targetFps);
+            var duration = videoInfo.Duration;
+
+            var startTime = TimeSpan.FromSeconds(startSeconds);
+
+            var endTime = duration;
+            if (stopSeconds.HasValue)
+            {
+                var requestedEndTime = TimeSpan.FromSeconds(stopSeconds.Value);
+                endTime = requestedEndTime < duration ? requestedEndTime : duration;
+            }
+
+            if (startTime >= duration)
                 yield break;
+
+            for (var t = startTime; t < endTime; t += targetInterval)
+            {
+                var imageData = mediaFile.Video.GetFrame(t);
+
+                var bitmap = imageData.ToBitmap();
+
+                var frame = new TimestampedFrame(bitmap, t);
+
+                yield return frame;
+            }
         }
 
-        var keepFrameNumber = dropRatio > 0 ? 1 / (1 - dropRatio) : 1;
-        
-        uint frameCounter = 0;
-        while (mediaFile.Video.TryGetNextFrame(out var imageData))
+        public void PrintFileInfo()
         {
-            frameCounter++;
+            var info = mediaFile.Video.Info;
 
-            if (dropRatio < 1 && frameCounter % (int)keepFrameNumber != 0)
-                continue;
+            AnsiConsole.Write(new TextPath(mediaFile.Info.FilePath));
 
-            yield return imageData.ToBitmap();
-        }
-    }
-    
-    // Returns TimestampedFrame where Timestamp is the requested time (exact).
-    public static IEnumerable<TimestampedFrame> GetFrames(this MediaFile mediaFile, float dropRatio)
-    {
-        if (dropRatio is < 0 or >= 1)
-            throw new ArgumentException("Drop ratio must be between 0 (none) and 1 (drop all).", nameof(dropRatio));
-
-        var videoInfo = mediaFile.Video.Info;
-        double srcFps = videoInfo.AvgFrameRate;
-        if (srcFps <= 0)
-            srcFps = 30.0; // fallback
-
-        double targetFps = srcFps * (1 - dropRatio);
-        if (targetFps <= 0)
-            yield break;
-
-        var targetInterval = TimeSpan.FromSeconds(1.0 / targetFps);
-        var duration = videoInfo.Duration;
-
-        for (var t = TimeSpan.Zero; t < duration; t += targetInterval)
-        {
-            // Acquire the unmanaged frame
-            var imageData = mediaFile.Video.GetFrame(t);
-
-            // Convert immediately to a managed Bitmap
-            var bitmap = imageData.ToBitmap();
-            
-            var frame = new TimestampedFrame(bitmap, t);
-            
+            AnsiConsole.WriteLine(Resources.Resources.InfoLine1, info.NumberOfFrames ?? 0, info.FrameSize,
+                info.IsVariableFrameRate, info.AvgFrameRate);
+            AnsiConsole.WriteLine(Resources.Resources.InfoLine2, info.Rotation, info.IsInterlaced, info.PixelFormat,
+                info.Duration, info.CodecName);
 
 
-            // Now yield the safe managed object
-            yield return frame;
+            AnsiConsole.Write(Resources.Resources.MetadataHeader);
+            foreach (var pair in info.Metadata)
+            {
+                AnsiConsole.Write(Resources.Resources.MetadataPair, pair.Key, pair.Value);
+                AnsiConsole.Write(@" ");
+            }
         }
     }
 }

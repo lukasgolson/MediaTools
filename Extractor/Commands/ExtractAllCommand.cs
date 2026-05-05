@@ -24,7 +24,9 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.ExtractAllArgumen
             ]),
             CommandOptions.OutputFrameRate,
             CommandOptions.Mask,
-            CommandOptions.CPUCountOption
+            CommandOptions.CPUCountOption,
+            CommandOptions.StartPosition,
+            CommandOptions.EndPosition
         ])
     {
     }
@@ -38,7 +40,9 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.ExtractAllArgumen
         int? FrameRate,
         ImageMaskGeneration ImageMaskGeneration,
         bool ExtractGeoSpatial,
-        int cpuCount) : IParsedCommandArguments;
+        int CpuCount,
+        float StartPosition,
+        float? EndPosition) : IParsedCommandArguments;
 
     public class Parser : ICommandArgumentParser<ExtractAllArguments>
     {
@@ -122,6 +126,14 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.ExtractAllArgumen
                 dropRatio = 0;
 
 
+            var dropRatioDefined = dropRatioString != null;
+
+            if (dropRatioDefined && fpsString != null)
+            {
+                return new FailedParseResult<ExtractAllArguments>(
+                    "Cannot specify both drop ratio and frame rate.");
+            }
+
             int? fps;
             if (int.TryParse(fpsString, out var fpsResult))
             {
@@ -130,6 +142,28 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.ExtractAllArgumen
             else
             {
                 fps = null;
+            }
+
+
+            float startPosition = 0;
+            float? endPosition;
+
+            var startPosArg = arguments.GetArgumentOrNull(CommandOptions.videoStartPositionLabel)
+                ?.ExpectedAsSingleValue();
+            var endPosArg = arguments.GetArgumentOrNull(CommandOptions.videoEndPositionLabel)?.ExpectedAsSingleValue();
+
+            if (startPosArg != null)
+            {
+                startPosition = float.Parse(startPosArg);
+            }
+
+            if (endPosArg != null)
+            {
+                endPosition = float.Parse(endPosArg);
+            }
+            else
+            {
+                endPosition = null;
             }
 
 
@@ -142,7 +176,8 @@ public class ExtractAllCommand : LeafCommand<ExtractAllCommand.ExtractAllArgumen
                 fps,
                 imageMaskGeneration,
                 InputDJI,
-                cpuCount
+                cpuCount,
+                startPosition, endPosition
             );
 
             return new SuccessfulParseResult<ExtractAllArguments>(result);
