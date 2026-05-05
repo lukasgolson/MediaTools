@@ -144,18 +144,28 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
 
     private static int GetFrameCount(ExtractAllCommand.ExtractAllArguments extractAllArguments, ProgressTask progress)
     {
-        // Determine video info required to calculate frame count for progress.
-        var file = MediaFile.Open(extractAllArguments.InputFile);
+        // 1. Wrap in a 'using' statement to prevent memory leaks from unmanaged media resources
+        using var file = MediaFile.Open(extractAllArguments.InputFile);
         file.PrintFileInfo();
         progress.Increment(1);
 
-        var actualFrameCount = file.Video.Info.NumberOfFrames ?? 0;
-        var finalFrameCount = MathF.Round(actualFrameCount * (1 - extractAllArguments.DropRatio));
+        var info = file.Video.Info;
+        var numberOfFrames = info.NumberOfFrames ?? 0;
+        var totalDurationSeconds = info.Duration.TotalSeconds;
 
+        var startSeconds = extractAllArguments.StartPosition;
+        var endSeconds = extractAllArguments.EndPosition ?? totalDurationSeconds;
+        var segmentRatio = (endSeconds - startSeconds) / totalDurationSeconds;
+
+        double keepRatio = extractAllArguments.FrameRate.HasValue
+            ? extractAllArguments.FrameRate.Value / info.AvgFrameRate
+            : 1.0 - extractAllArguments.DropRatio;
+
+        var finalFrameCount = Math.Round(segmentRatio * numberOfFrames * keepRatio);
 
         progress.Complete();
 
-        return (int)finalFrameCount;
+        return (int)finalFrameCount + 1;
     }
 
     private static DjiTelemetryData? MatchTelemetryByTime(
@@ -187,10 +197,34 @@ public class ExtractAllCommandHandler : ILeafCommandHandler<ExtractAllCommand.Ex
 
 
         var processingTasks = new List<Task>();
-        using var concurrencySemaphore = new SemaphoreSlim(extractAllArguments.cpuCount);
+        using var concurrencySemaphore = new SemaphoreSlim(extractAllArguments.CpuCount);
+        
+        var videoInfo = file.Video.Info;
+        double srcFps = videoInfo.AvgFrameRate;
+        if (srcFps <= 0)
+            srcFps = 30.0; // fallback
+
+
+        var targetFps = 0;
+
+        if (extractAllArguments.FrameRate != null)
+        {
+            targetFps = extractAllArguments.FrameRate.Value;
+        }
+        else
+        {
+            var dropRatio = extractAllArguments.DropRatio;
+            if (dropRatio is < 0 or >= 1)
+                throw new ArgumentException("Drop ratio must be between 0 (none) and 1 (drop all).", nameof(dropRatio));
+            
+            if (srcFps <= 0)
+                srcFps = 30.0; // fallback
+
+            targetFps = (int)(srcFps * (1.0 - dropRatio));
+        }
 
         ulong frameIndex = 0;
-        foreach (var frame in file.GetFrames(extractAllArguments.DropRatio))
+        foreach (var frame in file.GetFrames(targetFps, extractAllArguments.StartPosition, extractAllArguments.EndPosition))
         {
             await concurrencySemaphore.WaitAsync();
 
